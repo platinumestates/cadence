@@ -1462,7 +1462,7 @@ function renderChart(){
   // Background grid
   const padL = 36, padR = 10, padT = 10, padB = 20;
   const w = cssW - padL - padR, h = cssH - padT - padB;
-  const minY = 50, maxY = 170;
+  const minY = 80, maxY = 130;
   const yAt = bpm => padT + h * (1 - (bpm - minY) / (maxY - minY));
   const now = Date.now();
   const t0 = now - SAMPLE_WINDOW_MS;
@@ -1471,7 +1471,7 @@ function renderChart(){
   // grid lines
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 1;
-  for(let v=60; v<=160; v+=20){
+  for(let v=80; v<=130; v+=10){
     const y = yAt(v);
     ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+w, y); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -1677,7 +1677,7 @@ function renderWidget(){
   ctx.clearRect(0,0,cssW,cssH);
   const samples = S.samples;
   if(samples.length >= 2){
-    const minB = 55, maxB = 165;
+    const minB = 80, maxB = 130;
     const t0 = now - SAMPLE_WINDOW_MS;
     ctx.strokeStyle = curBand>0 ? ['#3bc6c6','#5bd336','#eed43a','#ef8e2a','#dd3040','#a8203a'][curBand] : '#3bc6c6';
     ctx.lineWidth = 1.6;
