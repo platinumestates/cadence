@@ -651,11 +651,11 @@ const LS_KEY           = 'cadence';
    without displacing the v0.4 messages — the old A2/A3/A4 shift to A3/A4/A5.
    Per-tier cooldown overrides the default; higher tiers interrupt lower; each fires once per excursion. */
 const ACUTE_TIERS = [
-  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                     kind:'acute' },
-  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, closed it out. Zoom out your timeframes. Limit orders only.", kind:'acute' },
-  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                            kind:'acute' },
-  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Closed out positions via limit.',                                                                   kind:'acute' },
-  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                             kind:'acute' }
+  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                   kind:'acute' },
+  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, close it out. Zoom out your timeframes. Limit orders only.", kind:'acute' },
+  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                          kind:'acute' },
+  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Close out positions via limit.',                                                                  kind:'acute' },
+  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                           kind:'acute' }
 ];
 
 /* Bundled audio files. v0.8: emptied — every slot now defaults to TTS until the user uploads.
