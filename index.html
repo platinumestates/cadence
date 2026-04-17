@@ -280,6 +280,9 @@ body.widget{background:transparent;overflow:hidden}
 body.widget .tb,body.widget .main .not-widget{display:none!important}
 body.widget .main{padding:0;overflow:hidden;background:transparent}
 body.widget .widget-only{display:flex!important}
+/* v0.9: popout orphan state — shown when BroadcastChannel has been silent >30s */
+body.widget.orphan .widget-box{opacity:.55;filter:saturate(.4)}
+body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen Cadence';position:absolute;bottom:3px;left:14px;right:14px;font-size:9px;color:#ff6b6b;letter-spacing:.4px;text-transform:uppercase;font-weight:600;text-align:center}
 
 .widget-only{display:none}
 .widget-box{width:100vw;height:100vh;background:rgba(10,11,14,.88);backdrop-filter:blur(10px);border:1px solid var(--bd2);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;-webkit-app-region:drag}
@@ -335,7 +338,7 @@ body.widget .widget-only{display:flex!important}
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">HRM · Trading Companion</div>
+      <div class="logo-sub">v0.9 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -346,7 +349,7 @@ body.widget .widget-only{display:flex!important}
     <div class="tb-r">
       <div class="seg" id="viewSeg">
         <button class="seg-b on" data-view="dash">Dashboard</button>
-        <button class="seg-b" data-view="widget">Widget</button>
+        <button class="seg-b" data-view="widget" title="Open a detached widget window you can drag and pin on top">Pop Out</button>
       </div>
       <button class="btn btn-ghost btn-icon" id="btnSettings" title="Settings">⚙</button>
       <button class="btn btn-primary" id="btnConnect">Connect sensor</button>
@@ -635,7 +638,8 @@ body.widget .widget-only{display:flex!important}
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.1 — HRM Trading Companion
+   CADENCE v0.9 — HRM Trading Companion
+   v0.9: detached popout widget via window.open + BroadcastChannel
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Constants ── */
@@ -645,6 +649,14 @@ const SAMPLE_WINDOW_MS = 2 * 60 * 1000;   // 2-min scrolling chart
 const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
 const STALE_MS         = 6000;            // BPM grey-out after no update
 const LS_KEY           = 'cadence';
+
+/* ── v0.9: Detached widget popout ──
+   Main tab owns the BT connection and all session logic.
+   Popout is a display-only separate window that subscribes to main tab via BroadcastChannel.
+   If this tab was opened with #widget hash, it IS the popout. */
+const IS_POPOUT = (typeof location !== 'undefined' && location.hash === '#widget');
+const SYNC_CHANNEL = ('BroadcastChannel' in window) ? new BroadcastChannel('cadence-sync') : null;
+const POPOUT_SILENCE_MS = 30000;
 
 /* Acute tier table — v0.6: 5-tier ladder.
    v0.5's "elevated heart rate / market-order" alert inserted at A2 (100 bpm, immediate, 5-min cooldown)
@@ -1863,17 +1875,95 @@ function clearSession(){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   VIEW MODE (dashboard / widget)
+   VIEW MODE (dashboard / widget) + v0.9 popout sync
 ═══════════════════════════════════════════════════════════ */
 function setView(mode){
+  // Main tab clicking "Pop Out" → open a separate small window instead of in-place toggle
+  if(mode === 'widget' && !IS_POPOUT){
+    const url = location.href.split('#')[0] + '#widget';
+    const features = 'width=320,height=140,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no';
+    let popup = null;
+    try { popup = window.open(url, 'cadence-widget', features); } catch(e){ popup = null; }
+    if(!popup){
+      // Popup blocked — fall back to old in-tab widget-only view so the feature still works
+      document.body.classList.add('widget');
+      document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === 'widget'));
+      requestAnimationFrame(() => { renderChart(); renderWidget(); });
+      setBanner('warn', 'Popup blocked',
+        'Allow popups for this site to use the detached widget. Falling back to in-tab widget. In Chrome: click the popup-blocked icon in the address bar → Always allow.');
+      return;
+    }
+    popup.focus();
+    // Leave the segmented control on Dashboard — main tab keeps running normally
+    return;
+  }
+  // Popout tab applying widget CSS, or main tab returning to dashboard
   if(mode === 'widget'){
     document.body.classList.add('widget');
   } else {
     document.body.classList.remove('widget');
   }
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === mode));
-  // resize canvases next frame
   requestAnimationFrame(() => { renderChart(); renderWidget(); });
+}
+
+/* v0.9: broadcast minimal state snapshot for popout to render. Fires every tick from tickUi. */
+function broadcastState(){
+  if(!SYNC_CHANNEL || IS_POPOUT) return;
+  try {
+    SYNC_CHANNEL.postMessage({
+      type: 'state',
+      t: Date.now(),
+      connected: !!S.connected,
+      currentBpm: S.currentBpm,
+      lastBpmTs: S.lastBpmTs,
+      maxBpm: S.maxBpm || 0,
+      chronicSec: S.chronicSec || 0,
+      sourceKind: S.sourceKind || null,
+      samples: (S.samples || []).slice(-60)   // last ~60 samples is plenty for the sparkline
+    });
+  } catch(e){ /* ignore — channel might be closing on tab unload */ }
+}
+
+/* v0.9: popout tab wiring — display-only, subscribes to main tab, never touches BT. */
+function initPopout(){
+  document.body.classList.add('widget');
+
+  const wExit = document.getElementById('wExit');
+  if(wExit) wExit.onclick = () => { try{ window.close(); }catch(e){} };
+
+  let lastMsgT = 0;
+
+  if(SYNC_CHANNEL){
+    SYNC_CHANNEL.addEventListener('message', e => {
+      if(!e.data || e.data.type !== 'state') return;
+      lastMsgT = Date.now();
+      const d = e.data;
+      S.currentBpm = d.currentBpm;
+      S.lastBpmTs  = d.lastBpmTs;
+      S.maxBpm     = d.maxBpm || 0;
+      S.chronicSec = d.chronicSec || 0;
+      S.samples    = d.samples || [];
+      S.connected  = d.connected;
+      S.sourceKind = d.sourceKind;
+      if(!S.connected){
+        // Main disconnected its sensor — clear live BPM so stale styling kicks in
+        S.currentBpm = null;
+      }
+    });
+  }
+
+  const startedAt = Date.now();
+  setInterval(() => {
+    renderWidget();
+    // Orphan if: we've received at least one message but none recently, OR we've been
+    // open >5s without ever hearing from main (main tab not running or doesn't exist)
+    const silent = (lastMsgT && Date.now() - lastMsgT > POPOUT_SILENCE_MS)
+                || (!lastMsgT && Date.now() - startedAt > 5000);
+    document.body.classList.toggle('orphan', !!silent);
+  }, 1000);
+
+  window.addEventListener('resize', () => renderWidget());
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2172,6 +2262,8 @@ function wire(){
     const b = e.target.closest('[data-view]');
     if(b) setView(b.dataset.view);
   });
+  // v0.9: in the main tab, X on the (fallback) in-tab widget returns to dashboard.
+  // In the popout tab, initPopout() rewires this to window.close() instead.
   $('wExit').onclick = () => setView('dash');
 
   $('btnExportCsv').onclick = exportCsv;
@@ -2230,10 +2322,20 @@ function tickUi(){
     renderSessionClock();
     renderWidget();
   }
+  // v0.9: always broadcast (even when disconnected, so popout sees connected:false quickly)
+  broadcastState();
 }
 
 function init(){
   loadSettings();
+
+  // v0.9: popout mode — display-only, no BT, no audio, no scheduled alerts.
+  // Just load state from main tab via BroadcastChannel and render.
+  if(IS_POPOUT){
+    initPopout();
+    return;
+  }
+
   initTierState();
   renderAll();
   renderLog();
