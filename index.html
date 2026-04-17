@@ -651,11 +651,11 @@ const LS_KEY           = 'cadence';
    without displacing the v0.4 messages — the old A2/A3/A4 shift to A3/A4/A5.
    Per-tier cooldown overrides the default; higher tiers interrupt lower; each fires once per excursion. */
 const ACUTE_TIERS = [
-  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                   kind:'acute' },
-  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, close it out. Zoom out your timeframes. Limit orders only.", kind:'acute' },
-  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                          kind:'acute' },
-  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Close out positions via limit.',                                                                  kind:'acute' },
-  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                           kind:'acute' }
+  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                     kind:'acute' },
+  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, closed it out. Zoom out your timeframes. Limit orders only.", kind:'acute' },
+  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                            kind:'acute' },
+  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Closed out positions via limit.',                                                                   kind:'acute' },
+  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                             kind:'acute' }
 ];
 
 /* Bundled audio files. v0.8: emptied — every slot now defaults to TTS until the user uploads.
@@ -683,12 +683,12 @@ const CUSTOM_AUDIO_MAX_BYTES = 500 * 1024; // 500 KB per slot safeguard
    Only fire while the HR sensor is connected (so they don't go off when not trading). Dedup per day. */
 const SCHEDULED_ALERTS = [
   { id:'SA_0930', hour:9,  minute:30, msg:'Market open. Wait the first five-minute candle close.', label:'9:30 AM · Market open' },
-  { id:'SA_1130', hour:11, minute:30, msg:'London close.',                                          label:'11:30 AM · London close' },
+  { id:'SA_1130', hour:11, minute:30, msg:'London closed.',                                          label:'11:30 AM · London close' },
   { id:'SA_1200', hour:12, minute:0,  msg:'Take a lunch break.',                                    label:'12:00 PM · Lunch' },
   { id:'SA_1500', hour:15, minute:0,  msg:'Power hour.',                                            label:'3:00 PM · Power hour' },
   { id:'SA_1545', hour:15, minute:45, msg:'Five minutes till the closing algo. Close out your positions.', label:'3:45 PM · 5 min to algo' },
-  { id:'SA_1550', hour:15, minute:50, msg:'Ten minutes until market close.',                        label:'3:50 PM · Closing algo window' },
-  { id:'SA_1600', hour:16, minute:0,  msg:'Market close.',                                          label:'4:00 PM · Market close' },
+  { id:'SA_1550', hour:15, minute:50, msg:'Ten minute market algo.',                                label:'3:50 PM · 10 min market algo' },
+  { id:'SA_1600', hour:16, minute:0,  msg:'Market closed.',                                         label:'4:00 PM · Market close' },
   { id:'SA_1945', hour:19, minute:45, msg:'Fifteen minutes till Asia market open.',                 label:'7:45 PM · 15 min to Asia' },
   { id:'SA_2000', hour:20, minute:0,  msg:'Asia market open.',                                      label:'8:00 PM · Asia open' },
   { id:'SA_0030', hour:0,  minute:30, msg:"It's twelve thirty AM. You should be in bed.",           label:'12:30 AM · Bedtime reminder' },
