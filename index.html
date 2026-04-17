@@ -1006,7 +1006,9 @@ async function disconnectSensor(){
    Source:   wss://dev.pulsoid.net/api/v1/data/real_time_heart_rate?access_token=...
 ═══════════════════════════════════════════════════════════ */
 function pulsoidWsUrl(token){
-  return 'wss://dev.pulsoid.net/api/v1/data/real_time_heart_rate?response_type=json&access_token=' + encodeURIComponent(token);
+  // Correct endpoint per docs.pulsoid.net/read-heart-rate/read-heart-rate-via-websocket
+  // Default response is JSON: { measured_at, data: { heart_rate } }
+  return 'wss://dev.pulsoid.net/api/v1/data/real_time?access_token=' + encodeURIComponent(token);
 }
 
 async function connectPulsoid(){
@@ -1120,8 +1122,15 @@ async function testPulsoidToken(){
     });
     if(res.ok){
       const j = await res.json().catch(() => null);
-      const scopes = j && j.scope ? (Array.isArray(j.scope) ? j.scope.join(', ') : String(j.scope)) : '—';
-      r.innerHTML = '<span style="color:var(--t0)">✓ Token valid.</span> Scopes: <span class="mono">' + scopes + '</span>';
+      let scopes = '—';
+      if(j){
+        if(Array.isArray(j.scope) && j.scope.length) scopes = j.scope.join(', ');
+        else if(Array.isArray(j.scopes) && j.scopes.length) scopes = j.scopes.join(', ');
+        else if(typeof j.scope === 'string' && j.scope) scopes = j.scope;
+        else if(typeof j.scopes === 'string' && j.scopes) scopes = j.scopes;
+      }
+      const exp = j && (j.expires_in != null) ? (' · expires in ' + Math.round(j.expires_in/86400) + 'd') : '';
+      r.innerHTML = '<span style="color:var(--t0)">✓ Token valid.</span> Scope: <span class="mono">' + scopes + '</span>' + exp;
     } else {
       r.innerHTML = '<span style="color:var(--t4)">✗ Rejected — HTTP ' + res.status + '.</span> Regenerate at pulsoid.net/ui/keys.';
     }
