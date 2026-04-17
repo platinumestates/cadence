@@ -429,6 +429,26 @@ body.widget .widget-only{display:flex!important}
     <div class="mbody">
 
       <div class="sec">
+        <div class="sec-ti">HR Source</div>
+        <div class="fld">
+          <label class="fld-lbl">Where Cadence gets the BPM stream</label>
+          <div class="seg" style="display:inline-flex">
+            <button class="seg-b on" data-src="bluetooth">Web Bluetooth (direct)</button>
+            <button class="seg-b" data-src="pulsoid">Pulsoid stream</button>
+          </div>
+          <div class="fld-h">Web Bluetooth pairs directly with the sensor — lowest latency, but only one app can hold the sensor at a time. Pulsoid stream reads the live feed from your Pulsoid session, so Pulsoid and Cadence can run side-by-side.</div>
+        </div>
+        <div class="fld" id="pulsoidTokenRow" style="display:none">
+          <label class="fld-lbl">Pulsoid access token</label>
+          <div class="fld-row">
+            <input class="inp mono" type="password" id="setPulsoidToken" placeholder="uuid from pulsoid.net/ui/keys" autocomplete="off" spellcheck="false">
+            <button class="btn btn-sm" id="setPulsoidTest">Test</button>
+          </div>
+          <div class="fld-h" id="pulsoidTestResult">Generate a token at <strong>pulsoid.net/ui/keys</strong> (BRO plan only). Scope required: <span class="mono">data:heart_rate:read</span>. Stored only in this browser's localStorage.</div>
+        </div>
+      </div>
+
+      <div class="sec">
         <div class="sec-ti">Voice Cues</div>
         <div class="fld fld-row">
           <label class="sw"><input type="checkbox" id="setVoiceEn" checked><span class="sw-t"></span><span>Enable voice cues</span></label>
@@ -584,7 +604,9 @@ const DEFAULTS = {
   chronicBpm: 95,
   cooldownSec: 90,
   demoMode: false,
-  skipHelp: false
+  skipHelp: false,
+  hrSource: 'bluetooth',    // 'bluetooth' | 'pulsoid'
+  pulsoidToken: ''          // stored locally only, never sent anywhere except Pulsoid's own endpoint
 };
 
 /* ── State ── */
@@ -596,6 +618,9 @@ const S = {
   characteristic: null,
   connected: false,
   connecting: false,
+  sourceKind: null,         // 'bluetooth' | 'pulsoid' | 'demo' once connected
+  pulsoidSocket: null,
+  pulsoidRetryTimer: null,
 
   // Session
   sessionStart: null,
@@ -868,12 +893,22 @@ function onBpm(bpm, ts){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   WEB BLUETOOTH
+   CONNECT ROUTER (bluetooth / pulsoid / demo)
 ═══════════════════════════════════════════════════════════ */
 async function connectSensor(){
   if(S.connecting || S.connected) return;
   if(S.settings.demoMode){ startDemo(); return; }
 
+  if(S.settings.hrSource === 'pulsoid'){
+    return connectPulsoid();
+  }
+  return connectBluetooth();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WEB BLUETOOTH
+═══════════════════════════════════════════════════════════ */
+async function connectBluetooth(){
   if(!navigator.bluetooth){
     setBanner('err', 'Web Bluetooth not available',
       "This browser doesn't expose the Web Bluetooth API. Use Chrome or Edge. On macOS you may need to enable chrome://flags/#enable-experimental-web-platform-features.");
@@ -904,6 +939,7 @@ async function connectSensor(){
 
     S.connected = true;
     S.connecting = false;
+    S.sourceKind = 'bluetooth';
     setConnStatus('conn', device.name || 'Polar HR sensor');
     $('btnConnect').style.display = 'none';
     $('btnDisconnect').style.display = '';
@@ -954,12 +990,144 @@ async function disconnectSensor(){
       S.device.gatt.disconnect();
     }
   }catch(e){}
+  disconnectPulsoid();
   if(S.demoTimer){ stopDemo(); }
   S.connected = false;
+  S.sourceKind = null;
   S.characteristic = null;
   setConnStatus('idle', 'Not connected');
   $('btnConnect').style.display = '';
   $('btnDisconnect').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PULSOID WEBSOCKET
+   Messages: { measured_at: <unix ms>, data: { heart_rate: <bpm> } }
+   Source:   wss://dev.pulsoid.net/api/v1/data/real_time_heart_rate?access_token=...
+═══════════════════════════════════════════════════════════ */
+function pulsoidWsUrl(token){
+  return 'wss://dev.pulsoid.net/api/v1/data/real_time_heart_rate?response_type=json&access_token=' + encodeURIComponent(token);
+}
+
+async function connectPulsoid(){
+  const token = (S.settings.pulsoidToken || '').trim();
+  if(!token){
+    setBanner('err', 'Pulsoid token missing',
+      'Open <strong>Settings → HR Source</strong> and paste your Pulsoid access token. Generate one at <strong>pulsoid.net/ui/keys</strong> (BRO plan).');
+    return;
+  }
+
+  S.connecting = true;
+  setConnStatus('connecting', 'Opening Pulsoid stream…');
+
+  // Validate token first — gives a clean error if it's stale/wrong
+  try{
+    const v = await fetch('https://dev.pulsoid.net/api/v1/token/validate', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(!v.ok){
+      S.connecting = false;
+      setConnStatus('err', 'Pulsoid token rejected');
+      setBanner('err', 'Pulsoid rejected the token',
+        'Validation returned HTTP ' + v.status + '. Regenerate the token at <strong>pulsoid.net/ui/keys</strong> (make sure scope includes <span class="mono">data:heart_rate:read</span>).');
+      return;
+    }
+  }catch(err){
+    S.connecting = false;
+    setConnStatus('err', 'Pulsoid validation failed');
+    setBanner('err', 'Could not reach Pulsoid',
+      (err && err.message) ? err.message : 'Network error. Check internet connection, then retry.');
+    return;
+  }
+
+  // Open socket
+  try{
+    const ws = new WebSocket(pulsoidWsUrl(token));
+    S.pulsoidSocket = ws;
+
+    ws.onopen = () => {
+      S.connected = true;
+      S.connecting = false;
+      S.sourceKind = 'pulsoid';
+      setConnStatus('conn', 'Pulsoid stream');
+      $('btnConnect').style.display = 'none';
+      $('btnDisconnect').style.display = '';
+      $('btnExportCsv').disabled = false;
+      $('sessStat').style.display = '';
+      clearBanner();
+      setBanner('ok', 'Pulsoid stream connected',
+        'Cadence is reading the live feed from your Pulsoid session. Pulsoid is still holding the sensor — keep its window open. If Pulsoid loses its sensor, this stream will stall too.');
+    };
+
+    ws.onmessage = (e) => {
+      try{
+        const m = JSON.parse(e.data);
+        // Tolerant parse: new shape { measured_at, data:{ heart_rate }} and older { heart_rate, measured_at }
+        const bpm = (m && m.data && typeof m.data.heart_rate === 'number') ? m.data.heart_rate
+                  : (typeof m.heart_rate === 'number') ? m.heart_rate
+                  : null;
+        const ts  = (typeof m.measured_at === 'number' && m.measured_at > 1e12) ? m.measured_at : Date.now();
+        if(bpm != null) onBpm(bpm, ts);
+      }catch(err){ /* ignore malformed frames */ }
+    };
+
+    ws.onerror = () => {
+      // onclose will follow; just flag the banner
+      setConnStatus('err', 'Pulsoid socket error');
+    };
+
+    ws.onclose = (ev) => {
+      const wasConnected = S.connected && S.sourceKind === 'pulsoid';
+      S.pulsoidSocket = null;
+      if(wasConnected){
+        S.connected = false;
+        S.sourceKind = null;
+        setConnStatus('err', 'Pulsoid stream closed');
+        $('btnConnect').style.display = '';
+        $('btnDisconnect').style.display = 'none';
+        setBanner('warn', 'Pulsoid stream disconnected',
+          'Socket closed (code ' + ev.code + '). Check Pulsoid is still receiving from the sensor, then click <strong>Connect sensor</strong> to reopen the stream.');
+      }
+      S.connecting = false;
+    };
+  }catch(err){
+    S.connecting = false;
+    setConnStatus('err', 'Pulsoid socket failed');
+    setBanner('err', 'Could not open Pulsoid stream',
+      (err && err.message) ? err.message : 'Unknown WebSocket error.');
+  }
+}
+
+function disconnectPulsoid(){
+  if(S.pulsoidRetryTimer){ clearTimeout(S.pulsoidRetryTimer); S.pulsoidRetryTimer = null; }
+  if(S.pulsoidSocket){
+    try{ S.pulsoidSocket.close(1000, 'client_disconnect'); }catch(e){}
+    S.pulsoidSocket = null;
+  }
+}
+
+async function testPulsoidToken(){
+  const token = ($('setPulsoidToken').value || '').trim();
+  const r = $('pulsoidTestResult');
+  if(!token){
+    r.innerHTML = '<span style="color:var(--t4)">Paste a token first.</span>';
+    return;
+  }
+  r.innerHTML = '<span class="mut">Checking…</span>';
+  try{
+    const res = await fetch('https://dev.pulsoid.net/api/v1/token/validate', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(res.ok){
+      const j = await res.json().catch(() => null);
+      const scopes = j && j.scope ? (Array.isArray(j.scope) ? j.scope.join(', ') : String(j.scope)) : '—';
+      r.innerHTML = '<span style="color:var(--t0)">✓ Token valid.</span> Scopes: <span class="mono">' + scopes + '</span>';
+    } else {
+      r.innerHTML = '<span style="color:var(--t4)">✗ Rejected — HTTP ' + res.status + '.</span> Regenerate at pulsoid.net/ui/keys.';
+    }
+  }catch(err){
+    r.innerHTML = '<span style="color:var(--t4)">✗ Network error:</span> ' + (err && err.message ? err.message : 'unknown');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1371,6 +1539,11 @@ function openSettings(){
   $('setCooldown').value = S.settings.cooldownSec; $('setCdVal').textContent = S.settings.cooldownSec;
   $('setDemoMode').checked = S.settings.demoMode;
   document.querySelectorAll('[data-engine]').forEach(b => b.classList.toggle('on', b.dataset.engine === S.settings.voiceEngine));
+  // HR source
+  document.querySelectorAll('[data-src]').forEach(b => b.classList.toggle('on', b.dataset.src === S.settings.hrSource));
+  $('setPulsoidToken').value = S.settings.pulsoidToken || '';
+  $('pulsoidTokenRow').style.display = (S.settings.hrSource === 'pulsoid') ? '' : 'none';
+  $('pulsoidTestResult').innerHTML = 'Generate a token at <strong>pulsoid.net/ui/keys</strong> (BRO plan only). Scope required: <span class="mono">data:heart_rate:read</span>. Stored only in this browser\'s localStorage.';
   $('setModal').classList.add('on');
 }
 function closeSettings(){ $('setModal').classList.remove('on'); }
@@ -1382,9 +1555,12 @@ function saveSettingsFromUI(){
   S.settings.chronicBpm   = parseInt($('setChronic').value, 10)  || DEFAULTS.chronicBpm;
   S.settings.cooldownSec  = parseInt($('setCooldown').value, 10) || DEFAULTS.cooldownSec;
   S.settings.demoMode     = $('setDemoMode').checked;
+  S.settings.pulsoidToken = ($('setPulsoidToken').value || '').trim();
+  // hrSource is set live when user taps the segmented buttons; persist whatever it is now
   saveSettings();
   closeSettings();
   renderAll();
+  updateConnectHint();
 }
 function resetSettingsToDefaults(){
   S.settings = Object.assign({}, DEFAULTS);
@@ -1406,8 +1582,12 @@ document.addEventListener('visibilitychange', () => {
 ═══════════════════════════════════════════════════════════ */
 function wire(){
   $('btnConnect').onclick = () => {
-    if(S.settings.skipHelp || S.settings.demoMode){ connectSensor(); }
-    else { $('helpModal').classList.add('on'); }
+    // Pulsoid and demo modes skip the BLE-specific pre-connect help
+    if(S.settings.demoMode || S.settings.hrSource === 'pulsoid' || S.settings.skipHelp){
+      connectSensor();
+    } else {
+      $('helpModal').classList.add('on');
+    }
   };
   $('btnDisconnect').onclick = disconnectSensor;
   $('helpClose').onclick = () => $('helpModal').classList.remove('on');
@@ -1431,6 +1611,17 @@ function wire(){
       S.settings.voiceEngine = b.dataset.engine;
     };
   });
+
+  document.querySelectorAll('[data-src]').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('[data-src]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      S.settings.hrSource = b.dataset.src;
+      $('pulsoidTokenRow').style.display = (b.dataset.src === 'pulsoid') ? '' : 'none';
+    };
+  });
+
+  $('setPulsoidTest').onclick = testPulsoidToken;
 
   $('viewSeg').addEventListener('click', e => {
     const b = e.target.closest('[data-view]');
@@ -1457,12 +1648,32 @@ function wire(){
 }
 
 function preflightBanner(){
+  updateConnectHint();
+}
+
+function updateConnectHint(){
+  if(S.connected) return; // don't clobber live-session banners
+
+  if(S.settings.hrSource === 'pulsoid'){
+    $('btnConnect').disabled = false;
+    if(!S.settings.pulsoidToken){
+      setBanner('warn', 'Pulsoid mode — token needed',
+        'Open <strong>Settings → HR Source</strong> and paste your Pulsoid access token. While in this mode Cadence reads the live feed from Pulsoid instead of pairing with the sensor directly.');
+    } else {
+      setBanner('info', 'Ready to stream from Pulsoid',
+        'Click <strong>Connect sensor</strong>. Make sure Pulsoid is running and showing a live BPM for your Verity Sense — Cadence reads that stream.');
+    }
+    return;
+  }
+
+  // Bluetooth mode
   if(!navigator.bluetooth){
     setBanner('err', 'Web Bluetooth unavailable',
-      "Cadence needs Chrome or Edge on desktop. Safari and Firefox do not expose the Web Bluetooth API. On macOS you may need <code>chrome://flags/#enable-experimental-web-platform-features</code>.");
+      "Cadence needs Chrome or Edge on desktop. Safari and Firefox do not expose the Web Bluetooth API. On macOS you may need <code>chrome://flags/#enable-experimental-web-platform-features</code>. Or switch to Pulsoid mode in Settings.");
     $('btnConnect').disabled = true;
     return;
   }
+  $('btnConnect').disabled = false;
   setBanner('info', 'Ready to pair',
     'Click <strong>Connect sensor</strong>. Make sure the Verity Sense shows a <strong>solid blue LED</strong> (broadcast mode) and the Polar Flow phone app is force-closed.');
 }
