@@ -285,24 +285,34 @@ body.widget.orphan .widget-box{opacity:.55;filter:saturate(.4)}
 body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen Cadence';position:absolute;bottom:3px;left:14px;right:14px;font-size:9px;color:#ff6b6b;letter-spacing:.4px;text-transform:uppercase;font-weight:600;text-align:center}
 
 .widget-only{display:none}
-.widget-box{width:100vw;height:100vh;background:rgba(10,11,14,.88);backdrop-filter:blur(10px);border:1px solid var(--bd2);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;-webkit-app-region:drag}
+.widget-box{width:100vw;height:100vh;background:rgba(10,11,14,.92);backdrop-filter:blur(10px);border:1px solid var(--bd2);border-radius:14px;padding:14px 16px 10px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;-webkit-app-region:drag}
 .widget-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--t0);transition:background .4s}
 .widget-box.tier-1::before{background:var(--t1)}
 .widget-box.tier-2::before{background:var(--t2)}
 .widget-box.tier-3::before{background:var(--t3)}
 .widget-box.tier-4::before{background:var(--t4)}
 .widget-box.tier-5::before{background:var(--t5)}
-.w-bpm{font-family:var(--f-mono);font-size:48px;font-weight:700;letter-spacing:-2px;color:var(--tx);line-height:1;font-variant-numeric:tabular-nums;transition:color .4s}
+.w-top{display:flex;align-items:center;gap:14px;flex:0 0 auto}
+.w-bpm{font-family:var(--f-mono);font-size:64px;font-weight:700;letter-spacing:-3px;color:var(--tx);line-height:.9;font-variant-numeric:tabular-nums;transition:color .4s,transform .2s;min-width:110px;text-align:left;transform-origin:center}
 .w-bpm.t-1{color:var(--t1)}.w-bpm.t-2{color:var(--t2)}.w-bpm.t-3{color:var(--t3)}.w-bpm.t-4{color:var(--t4)}.w-bpm.t-5{color:var(--t5)}
 .w-bpm.stale{opacity:.35}
-.w-mid{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.w-badge{font-family:var(--f-body);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:var(--t0);display:flex;align-items:center;gap:5px}
-.w-badge .dot{width:5px;height:5px;background:currentColor}
+/* v0.9.1: BPM heartbeat — animation duration derived from live BPM (60000/bpm ms) in JS */
+.w-bpm.beating{animation:heartbeat var(--beat-duration,600ms) ease-out infinite}
+.w-bpm.t-3.beating,.w-bpm.t-4.beating,.w-bpm.t-5.beating{filter:drop-shadow(0 0 8px currentColor)}
+@keyframes heartbeat{
+  0%,  55%, 100% { transform: scale(1); }
+  10% { transform: scale(1.14); }
+  22% { transform: scale(1); }
+  32% { transform: scale(1.07); }
+}
+.w-mid{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;justify-content:center}
+.w-badge{font-family:var(--f-body);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;font-weight:700;color:var(--t0);display:flex;align-items:center;gap:6px;transition:color .4s}
+.w-badge .dot{width:6px;height:6px;background:currentColor;border-radius:50%}
 .w-badge.t-1{color:var(--t1)}.w-badge.t-2{color:var(--t2)}.w-badge.t-3{color:var(--t3)}.w-badge.t-4{color:var(--t4)}.w-badge.t-5{color:var(--t5)}
-.w-stat{font-size:10px;color:var(--tx2);font-family:var(--f-mono);letter-spacing:.2px;font-variant-numeric:tabular-nums}
-.w-stat em{color:var(--tx3);font-style:normal;letter-spacing:1.2px;text-transform:uppercase;font-size:8.5px;font-weight:600;margin-right:5px;font-family:var(--f-body)}
-.w-spark{width:72px;height:40px;display:block;-webkit-app-region:no-drag}
-.w-exit{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;-webkit-app-region:no-drag;padding:2px 6px;line-height:1;opacity:0;transition:opacity .15s;font-family:var(--f-body)}
+.w-statrow{font-size:13px;color:var(--tx);font-family:var(--f-mono);letter-spacing:.2px;font-variant-numeric:tabular-nums;line-height:1.2}
+.w-statrow em{color:var(--tx3);font-style:normal;letter-spacing:1.2px;text-transform:uppercase;font-size:9px;font-weight:600;font-family:var(--f-body);margin-right:6px;display:inline-block;min-width:30px}
+.w-spark{width:100%;height:34px;display:block;-webkit-app-region:no-drag;flex:0 0 auto}
+.w-exit{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;-webkit-app-region:no-drag;padding:2px 6px;line-height:1;opacity:0;transition:opacity .15s;font-family:var(--f-body);z-index:2}
 .widget-box:hover .w-exit{opacity:1}
 .w-exit:hover{color:var(--tx)}
 
@@ -338,7 +348,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.9 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.9.1 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -448,14 +458,16 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <!-- ═══════════════ WIDGET-ONLY VIEW ═══════════════ -->
   <div class="widget-only" id="widgetView">
     <div class="widget-box" id="widgetBox">
-      <div class="w-bpm stale" id="wBpm">—</div>
-      <div class="w-mid">
-        <div class="w-badge" id="wBadge"><span class="dot"></span><span id="wBadgeText">Baseline</span></div>
-        <div class="w-stat"><em>peak</em><span id="wPeak">—</span></div>
-        <div class="w-stat"><em>≥95</em><span id="wTime">00:00</span></div>
+      <div class="w-top">
+        <div class="w-bpm stale" id="wBpm">—</div>
+        <div class="w-mid">
+          <div class="w-badge" id="wBadge"><span class="dot"></span><span id="wBadgeText">Standby</span></div>
+          <div class="w-statrow"><em>Peak</em><span id="wPeak">—</span></div>
+          <div class="w-statrow"><em>≥95</em><span id="wTime">00:00</span></div>
+        </div>
+        <button class="w-exit" id="wExit" title="Close widget">✕</button>
       </div>
-      <canvas class="w-spark" id="wSpark" width="144" height="80"></canvas>
-      <button class="w-exit" id="wExit" title="Exit widget">✕</button>
+      <canvas class="w-spark" id="wSpark"></canvas>
     </div>
   </div>
 
@@ -638,8 +650,9 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.9 — HRM Trading Companion
-   v0.9: detached popout widget via window.open + BroadcastChannel
+   CADENCE v0.9.1 — HRM Trading Companion
+   v0.9:   detached popout widget via window.open + BroadcastChannel
+   v0.9.1: larger BPM readout, stacked layout, heartbeat pulse on elevated
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Constants ── */
@@ -1766,6 +1779,18 @@ function renderWidget(){
   const wBpm = $('wBpm');
   wBpm.textContent = S.currentBpm || '—';
   wBpm.className = 'w-bpm' + (stale?' stale':'') + (S.currentBpm ? ' t-'+curBand : '');
+
+  // v0.9.1: Heartbeat pulse — fires when BPM puts you in tier 2+ (≥100 bpm),
+  // beat duration synced to actual heart rate (60000ms / bpm).
+  // Stale/disconnected state suppresses animation.
+  if(!stale && S.currentBpm && curBand >= 2){
+    wBpm.classList.add('beating');
+    wBpm.style.setProperty('--beat-duration', Math.round(60000 / S.currentBpm) + 'ms');
+  } else {
+    wBpm.classList.remove('beating');
+    wBpm.style.removeProperty('--beat-duration');
+  }
+
   const labels = ['Baseline','Engaged','Elevated','High','Critical','Extreme'];
   $('wBadgeText').textContent = S.currentBpm ? labels[curBand] : 'Standby';
   $('wBadge').className = 'w-badge' + (S.currentBpm ? ' t-'+curBand : '');
@@ -1773,10 +1798,10 @@ function renderWidget(){
   $('wTime').textContent = fmtClock(S.chronicSec);
   $('widgetBox').className = 'widget-box tier-'+curBand;
 
-  // Spark
+  // Spark — now full-width across the bottom of the widget
   const c = $('wSpark'); if(!c) return;
   const dpr = window.devicePixelRatio || 1;
-  const cssW = c.clientWidth || 144, cssH = c.clientHeight || 40;
+  const cssW = c.clientWidth || 288, cssH = c.clientHeight || 34;
   if(c.width !== cssW*dpr || c.height !== cssH*dpr){ c.width = cssW*dpr; c.height = cssH*dpr; }
   const ctx = c.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -1786,7 +1811,7 @@ function renderWidget(){
     const minB = 80, maxB = 130;
     const t0 = now - SAMPLE_WINDOW_MS;
     ctx.strokeStyle = curBand>0 ? ['#42e5e5','#6cf03c','#ffe135','#ff9a2e','#ff3347','#d11f3f'][curBand] : '#42e5e5';
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
     let started = false;
     samples.forEach(s => {
@@ -1881,7 +1906,7 @@ function setView(mode){
   // Main tab clicking "Pop Out" → open a separate small window instead of in-place toggle
   if(mode === 'widget' && !IS_POPOUT){
     const url = location.href.split('#')[0] + '#widget';
-    const features = 'width=320,height=140,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no';
+    const features = 'width=340,height=170,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no';
     let popup = null;
     try { popup = window.open(url, 'cadence-widget', features); } catch(e){ popup = null; }
     if(!popup){
