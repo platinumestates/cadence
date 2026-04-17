@@ -1,34 +1,1500 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadence — HRM Trading Companion</title>
-    <style>
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #0a0a0f;
-            color: #e8e4df;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-        .container { text-align: center; }
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 300;
-            letter-spacing: 0.15em;
-            margin-bottom: 0.5rem;
-        }
-        p { color: #888; font-size: 1.1rem; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>Cadence — HRM Trading Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Warmer-dark surface palette (distinct from TradeLog's cool blue-black) */
+  --bg:#0a0b0e;
+  --bg1:#111216;
+  --bg2:#171820;
+  --bg3:#1e1f29;
+  --bg4:#272934;
+  --bg5:#32343f;
+  --bd:rgba(255,255,255,.055);
+  --bd2:rgba(255,255,255,.11);
+  --bd3:rgba(255,255,255,.22);
+  --tx:#ecebe5;
+  --tx2:#9e9b90;
+  --tx3:#605d55;
+
+  /* Tier ladder — sage through amber to crimson */
+  --t0:#7ba890;           /* baseline calm */
+  --t1:#d9a85c;           /* soft amber (A1 / C1) */
+  --t2:#e68a46;           /* orange (A2 / C2) */
+  --t3:#df5f56;           /* coral (A3 / C3) */
+  --t4:#c12f4a;           /* crimson (A4 / C4-5) */
+
+  --t0-bg:rgba(123,168,144,.12);
+  --t1-bg:rgba(217,168,92,.14);
+  --t2-bg:rgba(230,138,70,.15);
+  --t3-bg:rgba(223,95,86,.16);
+  --t4-bg:rgba(193,47,74,.17);
+
+  --rec:#8ac8b4;          /* positive recovery */
+  --rec-bg:rgba(138,200,180,.13);
+  --warn:#e8b95e;
+  --info:#7aa3e3;
+
+  --r:10px;
+  --r2:14px;
+  --r3:18px;
+
+  --f-head:'Fraunces',Georgia,serif;
+  --f-body:'Instrument Sans',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+
+/* ── TOPBAR ── */
+.tb{height:52px;background:var(--bg1);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;z-index:100;gap:16px}
+.logo{display:flex;flex-direction:column;line-height:1}
+.logo-w{font-family:var(--f-head);font-size:21px;font-weight:600;letter-spacing:-.8px;font-style:italic;color:var(--tx)}
+.logo-w em{color:var(--t0);font-style:italic;font-weight:700}
+.logo-sub{font-family:var(--f-body);font-size:9px;color:var(--tx3);letter-spacing:2.4px;text-transform:uppercase;margin-top:3px;font-weight:500}
+.tb-mid{display:flex;align-items:center;gap:14px;flex:1;justify-content:center}
+.tb-r{display:flex;align-items:center;gap:8px}
+
+/* Status pill (top bar) */
+.stat{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:5px 12px 5px 8px;font-size:11px;font-family:var(--f-body);font-weight:500;color:var(--tx2);transition:all .2s}
+.stat.conn{border-color:rgba(123,168,144,.35);background:rgba(123,168,144,.08);color:var(--t0)}
+.stat.err{border-color:rgba(193,47,74,.35);background:var(--t4-bg);color:var(--t4)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--tx3);box-shadow:0 0 0 0 rgba(255,255,255,.3)}
+.stat.conn .dot{background:var(--t0);animation:pulse 2.2s ease-in-out infinite}
+.stat.err .dot{background:var(--t4)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(123,168,144,.4)}50%{box-shadow:0 0 0 6px rgba(123,168,144,0)}}
+
+/* ── BUTTONS ── */
+.btn{border:1px solid var(--bd2);background:var(--bg3);color:var(--tx2);border-radius:8px;padding:6px 13px;font-size:12px;font-family:var(--f-body);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500;letter-spacing:.1px}
+.btn:hover{color:var(--tx);border-color:var(--bd3);background:var(--bg4)}
+.btn-primary{background:var(--t0);color:#0a0b0e;border-color:var(--t0);font-weight:600}
+.btn-primary:hover{background:#8eb8a2;border-color:#8eb8a2;color:#0a0b0e}
+.btn-ghost{background:transparent}
+.btn-ghost:hover{background:var(--bg3)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-lg{padding:9px 18px;font-size:13px}
+.btn-warn{border-color:rgba(232,185,94,.35);color:var(--warn)}
+.btn-warn:hover{background:rgba(232,185,94,.1)}
+.btn-danger{border-color:rgba(193,47,74,.4);color:var(--t4)}
+.btn-danger:hover{background:var(--t4-bg)}
+.btn-icon{padding:6px 9px;display:inline-flex;align-items:center;justify-content:center;min-width:32px}
+.btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+.seg{display:flex;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:2px;gap:2px}
+.seg-b{background:none;border:none;color:var(--tx2);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--f-body);font-weight:500;transition:all .15s}
+.seg-b:hover{color:var(--tx)}
+.seg-b.on{background:var(--bg4);color:var(--tx);box-shadow:inset 0 0 0 1px var(--bd2)}
+
+/* ── LAYOUT ── */
+.app{display:flex;flex:1;overflow:hidden;flex-direction:column}
+.main{flex:1;overflow-y:auto;padding:20px 22px 24px;background:var(--bg)}
+
+/* ── DASHBOARD: hero row ── */
+.hero{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+.hero-bpm{background:radial-gradient(120% 140% at 20% 0%,var(--bg2) 0%,var(--bg1) 70%);border:1px solid var(--bd);border-radius:var(--r3);padding:22px 26px;position:relative;overflow:hidden}
+.hero-bpm::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--t0) 0%,var(--t0) 100%);transition:background .6s}
+.hero-bpm.tier-1::before{background:linear-gradient(90deg,var(--t1) 0%,var(--t1) 100%)}
+.hero-bpm.tier-2::before{background:linear-gradient(90deg,var(--t1) 0%,var(--t2) 100%)}
+.hero-bpm.tier-3::before{background:linear-gradient(90deg,var(--t2) 0%,var(--t3) 100%)}
+.hero-bpm.tier-4::before{background:linear-gradient(90deg,var(--t3) 0%,var(--t4) 100%)}
+.hero-lbl{font-size:10px;color:var(--tx2);letter-spacing:2.2px;text-transform:uppercase;font-weight:600;margin-bottom:14px}
+.hero-mainrow{display:flex;align-items:flex-end;gap:22px;margin-bottom:6px}
+.bpm-big{font-family:var(--f-mono);font-size:112px;font-weight:700;line-height:.9;letter-spacing:-4px;color:var(--tx);font-variant-numeric:tabular-nums;transition:color .4s}
+.bpm-big.t-1{color:var(--t1)}.bpm-big.t-2{color:var(--t2)}.bpm-big.t-3{color:var(--t3)}.bpm-big.t-4{color:var(--t4)}
+.bpm-big.stale{opacity:.4}
+.bpm-u{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.bpm-u-lg{font-family:var(--f-head);font-size:18px;font-weight:500;font-style:italic;color:var(--tx2);line-height:1}
+.bpm-u-sm{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);font-weight:600}
+
+/* Tier badge under BPM */
+.tier-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.3px;background:var(--t0-bg);border:1px solid rgba(123,168,144,.3);color:var(--t0);transition:all .3s}
+.tier-badge.t-1{background:var(--t1-bg);border-color:rgba(217,168,92,.35);color:var(--t1)}
+.tier-badge.t-2{background:var(--t2-bg);border-color:rgba(230,138,70,.4);color:var(--t2)}
+.tier-badge.t-3{background:var(--t3-bg);border-color:rgba(223,95,86,.45);color:var(--t3)}
+.tier-badge.t-4{background:var(--t4-bg);border-color:rgba(193,47,74,.5);color:var(--t4)}
+.tier-badge .dot{width:6px;height:6px;background:currentColor}
+
+/* Hero right — session stats */
+.hero-stats{display:grid;grid-template-rows:repeat(3,1fr);gap:10px}
+.stat-cell{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sc-l{display:flex;flex-direction:column;gap:2px}
+.sc-lbl{font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx2);font-weight:600}
+.sc-v{font-family:var(--f-mono);font-size:22px;font-weight:500;color:var(--tx);font-variant-numeric:tabular-nums}
+.sc-v.pos{color:var(--t0)}
+.sc-v.neg{color:var(--t4)}
+.sc-v.warn{color:var(--t1)}
+.sc-sub{font-size:10.5px;color:var(--tx2);font-family:var(--f-body);letter-spacing:.1px}
+
+/* ── CHART CARD ── */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px}
+.ct-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ct{font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:2px;font-weight:600;font-family:var(--f-body)}
+.ct em{font-style:normal;color:var(--tx3);font-weight:500;margin-left:10px;letter-spacing:.8px;font-size:10.5px;text-transform:none}
+.ct-right{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--tx2);font-family:var(--f-body)}
+.legend-d{display:inline-block;width:8px;height:2px;border-radius:1px;margin-right:6px;vertical-align:middle}
+.chart-wrap{position:relative;height:220px}
+#chartCanvas{display:block;width:100%;height:100%}
+
+/* ── TIER LADDER CARDS ── */
+.ladder-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.ladder{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px}
+.ladder-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ladder-ti{font-family:var(--f-head);font-size:14px;font-style:italic;font-weight:600;color:var(--tx);letter-spacing:-.2px}
+.ladder-ti .kind{font-style:normal;font-family:var(--f-body);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin-left:8px;font-weight:600;vertical-align:2px}
+.ladder-sub{font-size:11px;color:var(--tx2);margin-bottom:14px;line-height:1.4;font-family:var(--f-body)}
+
+.tier-row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:9px 0;border-top:1px solid var(--bd);align-items:center;transition:all .25s}
+.tier-row:first-of-type{border-top:none;padding-top:0}
+.tier-row.fired{opacity:1}
+.tier-row.armed .t-chip{box-shadow:0 0 0 2px var(--bg2),0 0 0 3px currentColor,0 0 12px currentColor}
+.tier-row.latched{background:linear-gradient(90deg,transparent,currentColor 50%,transparent);background-size:300% 100%;animation:latchSweep 2.5s ease-out 1}
+@keyframes latchSweep{0%{background-position:-100% 0}100%{background-position:200% 0}}
+.t-chip{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:11px;font-weight:700;border:1.5px solid currentColor;background:var(--bg3);transition:all .25s}
+.t-chip.c-1{color:var(--t1)}.t-chip.c-2{color:var(--t2)}.t-chip.c-3{color:var(--t3)}.t-chip.c-4{color:var(--t4)}.t-chip.c-5{color:var(--t4)}
+.t-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.t-cond{font-family:var(--f-mono);font-size:11.5px;color:var(--tx);font-weight:500}
+.t-msg{font-family:var(--f-head);font-size:13px;font-style:italic;color:var(--tx2);font-weight:500;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-meter{display:flex;flex-direction:column;gap:3px;align-items:flex-end;min-width:80px}
+.t-bar{width:70px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.t-barfill{height:100%;width:0%;background:currentColor;transition:width .35s ease}
+.t-time{font-family:var(--f-mono);font-size:10px;color:var(--tx2);font-variant-numeric:tabular-nums}
+.tier-row.fired .t-chip{background:currentColor;color:var(--bg1)!important;border-color:currentColor}
+.tier-row.fired .t-chip::before{content:'✓';font-size:14px;color:var(--bg1)}
+.tier-row.fired .t-chip span{display:none}
+
+/* ── BANNER / ALERTS ── */
+.banner{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:12px 16px;margin-bottom:14px;display:flex;align-items:flex-start;gap:12px;font-size:12.5px;line-height:1.5}
+.banner.warn{border-color:rgba(232,185,94,.35);background:rgba(232,185,94,.06)}
+.banner.info{border-color:rgba(122,163,227,.3);background:rgba(122,163,227,.06)}
+.banner.err{border-color:rgba(193,47,74,.4);background:var(--t4-bg)}
+.banner.ok{border-color:rgba(123,168,144,.35);background:var(--t0-bg)}
+.banner-ic{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;font-family:var(--f-head);margin-top:1px}
+.banner.warn .banner-ic{background:rgba(232,185,94,.2);color:var(--warn)}
+.banner.info .banner-ic{background:rgba(122,163,227,.2);color:var(--info)}
+.banner.err .banner-ic{background:var(--t4-bg);color:var(--t4)}
+.banner.ok .banner-ic{background:var(--t0-bg);color:var(--t0)}
+.banner-body{flex:1;color:var(--tx)}
+.banner-body strong{color:var(--tx);font-weight:600}
+.banner-body em{font-style:normal;color:var(--tx2);display:block;margin-top:3px;font-size:11.5px}
+.banner-close{background:none;border:none;color:var(--tx3);cursor:pointer;padding:0 4px;font-size:16px;line-height:1}
+.banner-close:hover{color:var(--tx)}
+
+/* ── EVENT LOG ── */
+.log-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:14px 18px;margin-top:14px}
+.log-row{display:grid;grid-template-columns:58px 16px 1fr auto;gap:10px;padding:7px 0;border-top:1px solid var(--bd);font-size:11.5px;align-items:center}
+.log-row:first-of-type{border-top:none}
+.log-t{font-family:var(--f-mono);color:var(--tx3);font-size:10.5px}
+.log-d{width:8px;height:8px;border-radius:50%;background:var(--t1);margin-left:4px}
+.log-d.c-1{background:var(--t1)}.log-d.c-2{background:var(--t2)}.log-d.c-3{background:var(--t3)}.log-d.c-4{background:var(--t4)}.log-d.c-5{background:var(--t4)}.log-d.c-r{background:var(--rec)}
+.log-msg{color:var(--tx);font-family:var(--f-head);font-style:italic;font-size:13px;font-weight:500}
+.log-tag{font-family:var(--f-mono);font-size:9.5px;color:var(--tx3);background:var(--bg3);padding:3px 7px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase}
+.log-empty{color:var(--tx3);font-style:italic;padding:18px 0;text-align:center;font-size:12px;font-family:var(--f-head)}
+
+/* ── MODAL ── */
+.mbg{position:fixed;inset:0;background:rgba(5,6,9,.76);backdrop-filter:blur(6px);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.mbg.on{display:flex}
+.mbox{background:var(--bg1);border:1px solid var(--bd2);border-radius:var(--r3);width:100%;max-width:560px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+.mbox.wide{max-width:720px}
+.mhdr{padding:18px 22px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.mti{font-family:var(--f-head);font-size:20px;font-weight:600;font-style:italic;color:var(--tx);letter-spacing:-.4px;line-height:1.15}
+.msub{font-size:12px;color:var(--tx2);margin-top:4px;font-family:var(--f-body);line-height:1.5}
+.mclose{background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1}
+.mclose:hover{color:var(--tx)}
+.mbody{padding:18px 22px;overflow-y:auto;flex:1}
+.mfoot{padding:14px 22px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;background:var(--bg1)}
+
+.sec{margin-bottom:18px}
+.sec:last-child{margin-bottom:0}
+.sec-ti{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx2);font-weight:600;margin-bottom:10px;font-family:var(--f-body)}
+.fld{margin-bottom:12px}
+.fld:last-child{margin-bottom:0}
+.fld-lbl{display:block;font-size:11.5px;color:var(--tx);margin-bottom:6px;font-family:var(--f-body);font-weight:500}
+.fld-h{font-size:10.5px;color:var(--tx2);margin-top:4px;line-height:1.4;font-family:var(--f-body)}
+.fld-row{display:flex;align-items:center;gap:10px}
+.inp{width:100%;background:var(--bg3);border:1px solid var(--bd2);border-radius:8px;color:var(--tx);padding:8px 11px;font-family:var(--f-body);font-size:12.5px;outline:none;transition:border-color .15s}
+.inp:focus{border-color:var(--bd3)}
+.inp.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.rng{width:100%;-webkit-appearance:none;background:transparent;height:22px;cursor:pointer}
+.rng::-webkit-slider-runnable-track{height:3px;background:var(--bg4);border-radius:2px}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--t0);border-radius:50%;margin-top:-5.5px;border:2px solid var(--bg1);cursor:pointer}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.sw-t{width:34px;height:20px;background:var(--bg4);border-radius:10px;position:relative;transition:background .2s}
+.sw-t::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--tx);border-radius:50%;transition:left .2s}
+.sw input{display:none}
+.sw input:checked + .sw-t{background:var(--t0)}
+.sw input:checked + .sw-t::after{left:16px;background:var(--bg1)}
+
+/* ── WIDGET MODE ── */
+body.widget{background:transparent;overflow:hidden}
+body.widget .tb,body.widget .main .not-widget{display:none!important}
+body.widget .main{padding:0;overflow:hidden;background:transparent}
+body.widget .widget-only{display:flex!important}
+
+.widget-only{display:none}
+.widget-box{width:100vw;height:100vh;background:rgba(10,11,14,.88);backdrop-filter:blur(10px);border:1px solid var(--bd2);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;-webkit-app-region:drag}
+.widget-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--t0);transition:background .4s}
+.widget-box.tier-1::before{background:var(--t1)}
+.widget-box.tier-2::before{background:var(--t2)}
+.widget-box.tier-3::before{background:var(--t3)}
+.widget-box.tier-4::before{background:var(--t4)}
+.w-bpm{font-family:var(--f-mono);font-size:48px;font-weight:700;letter-spacing:-2px;color:var(--tx);line-height:1;font-variant-numeric:tabular-nums;transition:color .4s}
+.w-bpm.t-1{color:var(--t1)}.w-bpm.t-2{color:var(--t2)}.w-bpm.t-3{color:var(--t3)}.w-bpm.t-4{color:var(--t4)}
+.w-bpm.stale{opacity:.35}
+.w-mid{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.w-badge{font-family:var(--f-body);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:var(--t0);display:flex;align-items:center;gap:5px}
+.w-badge .dot{width:5px;height:5px;background:currentColor}
+.w-badge.t-1{color:var(--t1)}.w-badge.t-2{color:var(--t2)}.w-badge.t-3{color:var(--t3)}.w-badge.t-4{color:var(--t4)}
+.w-stat{font-size:10px;color:var(--tx2);font-family:var(--f-mono);letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.w-stat em{color:var(--tx3);font-style:normal;letter-spacing:1.2px;text-transform:uppercase;font-size:8.5px;font-weight:600;margin-right:5px;font-family:var(--f-body)}
+.w-spark{width:72px;height:40px;display:block;-webkit-app-region:no-drag}
+.w-exit{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;-webkit-app-region:no-drag;padding:2px 6px;line-height:1;opacity:0;transition:opacity .15s;font-family:var(--f-body)}
+.widget-box:hover .w-exit{opacity:1}
+.w-exit:hover{color:var(--tx)}
+
+/* ── DEMO PANEL (bottom right floating) ── */
+.demo-pane{position:fixed;bottom:16px;right:16px;background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r2);padding:11px 14px;display:flex;align-items:center;gap:10px;z-index:50;font-size:11px;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.demo-pane .tag{background:rgba(232,185,94,.15);color:var(--warn);border:1px solid rgba(232,185,94,.3);border-radius:4px;padding:2px 7px;font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-family:var(--f-body)}
+.demo-pane button{background:var(--bg3);border:1px solid var(--bd2);color:var(--tx2);padding:3px 9px;font-size:11px;border-radius:5px;cursor:pointer;font-family:var(--f-body)}
+.demo-pane button:hover{color:var(--tx);border-color:var(--bd3)}
+
+/* ── CHECKBOX ── */
+.cb{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--tx2);font-family:var(--f-body)}
+.cb input{accent-color:var(--t0);width:14px;height:14px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:880px){
+  .hero{grid-template-columns:1fr}
+  .ladder-row{grid-template-columns:1fr}
+  .bpm-big{font-size:88px}
+}
+
+/* ── HELPERS ── */
+.mut{color:var(--tx2)}
+.mono{font-family:var(--f-mono)}
+.pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;letter-spacing:.4px;font-family:var(--f-body);background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.pill.live{background:var(--t0-bg);border-color:rgba(123,168,144,.3);color:var(--t0)}
+.hr-sep{height:1px;background:var(--bd);margin:14px 0}
+</style>
 </head>
-<body>
-    <div class="container">
-        <h1>CADENCE</h1>
-        <p>Heart Rate Monitor — Coming Soon</p>
+<body id="body">
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<div class="tb not-widget">
+  <div class="logo">
+    <div class="logo-w"><em>Cadence</em></div>
+    <div class="logo-sub">HRM · Trading Companion</div>
+  </div>
+
+  <div class="tb-mid">
+    <div class="stat" id="connStat"><span class="dot"></span><span id="connText">Not connected</span></div>
+    <div class="stat" id="sessStat" style="display:none"><span class="dot"></span><span id="sessText">Session 00:00</span></div>
+  </div>
+
+  <div class="tb-r">
+    <div class="seg" id="viewSeg">
+      <button class="seg-b on" data-view="dash">Dashboard</button>
+      <button class="seg-b" data-view="widget">Widget</button>
     </div>
+    <button class="btn btn-ghost btn-icon" id="btnSettings" title="Settings">⚙</button>
+    <button class="btn btn-primary" id="btnConnect">Connect sensor</button>
+    <button class="btn" id="btnDisconnect" style="display:none">Disconnect</button>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div class="app">
+<div class="main" id="main">
+
+  <!-- Banners (prior to connect) -->
+  <div id="banners" class="not-widget"></div>
+
+  <!-- Hero row: big BPM + session stats -->
+  <div class="hero not-widget">
+    <div class="hero-bpm" id="heroBpm">
+      <div class="hero-lbl">Heart Rate · Live</div>
+      <div class="hero-mainrow">
+        <div class="bpm-big stale" id="bpmBig">—</div>
+        <div class="bpm-u">
+          <div class="bpm-u-lg">bpm</div>
+          <div class="bpm-u-sm" id="bpmSub">awaiting connection</div>
+        </div>
+      </div>
+      <div class="tier-badge" id="tierBadge"><span class="dot"></span><span id="tierLabel">Baseline</span></div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-cell">
+        <div class="sc-l"><div class="sc-lbl">Session avg</div><div class="sc-sub" id="scAvgSub">since connect</div></div>
+        <div class="sc-v" id="scAvg">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="sc-l"><div class="sc-lbl">Session peak</div><div class="sc-sub" id="scPeakSub">—</div></div>
+        <div class="sc-v" id="scPeak">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="sc-l"><div class="sc-lbl">Time ≥ 95 bpm</div><div class="sc-sub">cumulative</div></div>
+        <div class="sc-v" id="scTime">00:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart card -->
+  <div class="card not-widget">
+    <div class="ct-row">
+      <div class="ct">Scrolling 2-minute window<em id="chartRange">0 samples</em></div>
+      <div class="ct-right">
+        <span><span class="legend-d" style="background:var(--t0)"></span>BPM</span>
+        <span><span class="legend-d" style="background:var(--t1);opacity:.6"></span>A1 110</span>
+        <span><span class="legend-d" style="background:var(--t2);opacity:.6"></span>A2 125</span>
+        <span><span class="legend-d" style="background:var(--t3);opacity:.6"></span>A3 140</span>
+        <span><span class="legend-d" style="background:var(--t4);opacity:.6"></span>A4 155</span>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="chartCanvas" width="900" height="220"></canvas></div>
+  </div>
+
+  <!-- Tier ladders -->
+  <div class="ladder-row not-widget">
+    <div class="ladder" id="acuteLadder">
+      <div class="ladder-h">
+        <div class="ladder-ti">Acute spike<span class="kind">Track A</span></div>
+        <div class="pill" id="acuteStatePill">armed</div>
+      </div>
+      <div class="ladder-sub">Short-duration escalation — catches panic-order moments before the trade goes in.</div>
+      <div id="acuteTiers"></div>
+    </div>
+
+    <div class="ladder" id="chronicLadder">
+      <div class="ladder-h">
+        <div class="ladder-ti">Chronic stress<span class="kind">Track B</span></div>
+        <div class="pill" id="chronicStatePill">armed</div>
+      </div>
+      <div class="ladder-sub">Cumulative time ≥ 95 bpm this session — catches slow-cooking tilt over hours.</div>
+      <div id="chronicTiers"></div>
+    </div>
+  </div>
+
+  <!-- Event log -->
+  <div class="log-card not-widget">
+    <div class="ct-row">
+      <div class="ct">Session event log<em id="logCount">0 events</em></div>
+      <div class="ct-right">
+        <button class="btn btn-sm" id="btnExportCsv" disabled>Export CSV</button>
+        <button class="btn btn-sm btn-ghost" id="btnClearLog">Clear session</button>
+      </div>
+    </div>
+    <div id="logList"></div>
+  </div>
+
+  <!-- ═══════════════ WIDGET-ONLY VIEW ═══════════════ -->
+  <div class="widget-only" id="widgetView">
+    <div class="widget-box" id="widgetBox">
+      <div class="w-bpm stale" id="wBpm">—</div>
+      <div class="w-mid">
+        <div class="w-badge" id="wBadge"><span class="dot"></span><span id="wBadgeText">Baseline</span></div>
+        <div class="w-stat"><em>peak</em><span id="wPeak">—</span></div>
+        <div class="w-stat"><em>≥95</em><span id="wTime">00:00</span></div>
+      </div>
+      <canvas class="w-spark" id="wSpark" width="144" height="80"></canvas>
+      <button class="w-exit" id="wExit" title="Exit widget">✕</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════ SETTINGS MODAL ═══════════════ -->
+<div class="mbg" id="setModal">
+  <div class="mbox wide">
+    <div class="mhdr">
+      <div>
+        <div class="mti">Settings</div>
+        <div class="msub">Tier thresholds, voice, baseline, and the disclaimer.</div>
+      </div>
+      <button class="mclose" id="setClose">✕</button>
+    </div>
+    <div class="mbody">
+
+      <div class="sec">
+        <div class="sec-ti">Voice Cues</div>
+        <div class="fld fld-row">
+          <label class="sw"><input type="checkbox" id="setVoiceEn" checked><span class="sw-t"></span><span>Enable voice cues</span></label>
+        </div>
+        <div class="fld">
+          <label class="fld-lbl">Engine</label>
+          <div class="seg" style="display:inline-flex">
+            <button class="seg-b on" data-engine="web">Web SpeechSynthesis (free)</button>
+            <button class="seg-b" data-engine="eleven">ElevenLabs (stubbed)</button>
+          </div>
+          <div class="fld-h">ElevenLabs integration is stubbed in v0.1. Add an API key to activate in a future build. Recommended voice: Daniel (British) — stability 50–60, similarity 70–80.</div>
+        </div>
+        <div class="fld">
+          <label class="fld-lbl">Speech rate <span class="mono mut" id="setRateVal">0.95</span></label>
+          <input class="rng" type="range" id="setRate" min="0.7" max="1.2" step="0.05" value="0.95">
+        </div>
+        <div class="fld">
+          <label class="fld-lbl">Volume <span class="mono mut" id="setVolVal">0.9</span></label>
+          <input class="rng" type="range" id="setVol" min="0" max="1" step="0.05" value="0.9">
+        </div>
+        <div class="fld">
+          <button class="btn btn-sm" id="setVoiceTest">Test voice</button>
+          <span class="fld-h" style="display:inline-block;margin-left:10px">Plays "Is this trade in your plan?"</span>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-ti">Baseline</div>
+        <div class="fld">
+          <label class="fld-lbl">Resting HR (for recovery cue) — bpm</label>
+          <input class="inp mono" type="number" id="setBaseline" min="40" max="100" value="85">
+          <div class="fld-h">When HR stays below this for 30s after an elevated excursion, a quiet "Nice recovery." cue plays once. Set slightly above your typical relaxed trading HR.</div>
+        </div>
+        <div class="fld">
+          <label class="fld-lbl">Chronic threshold — bpm</label>
+          <input class="inp mono" type="number" id="setChronic" min="80" max="110" value="95">
+          <div class="fld-h">Time spent at or above this BPM accumulates toward chronic-stress tiers. Default 95 bpm.</div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-ti">Cooldowns &amp; Behavior</div>
+        <div class="fld">
+          <label class="fld-lbl">Per-tier cooldown — seconds <span class="mono mut" id="setCdVal">90</span></label>
+          <input class="rng" type="range" id="setCooldown" min="60" max="120" step="5" value="90">
+          <div class="fld-h">Minimum gap between re-fires of the same acute tier.</div>
+        </div>
+        <div class="fld">
+          <label class="sw"><input type="checkbox" id="setDemoMode"><span class="sw-t"></span><span>Demo mode (simulated HR stream)</span></label>
+          <div class="fld-h">Generates a realistic HR stream without a sensor — useful for testing tiers. Click "Connect sensor" after enabling to start the simulator.</div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-ti">Disclaimer</div>
+        <div class="fld-h" style="line-height:1.6">Cadence thresholds are behavioral and performance-based, not medical. Sustained resting HR &gt; 155 bpm or consistently downward HRV trends warrant cardiology review — not Cadence configuration adjustment. This app is a trading self-regulation tool, not a diagnostic device.</div>
+      </div>
+
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="setReset">Reset to defaults</button>
+      <button class="btn btn-primary" id="setSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CONNECT HELPER MODAL ═══════════════ -->
+<div class="mbg" id="helpModal">
+  <div class="mbox">
+    <div class="mhdr">
+      <div>
+        <div class="mti">Before you connect</div>
+        <div class="msub">A few things the Verity Sense is picky about.</div>
+      </div>
+      <button class="mclose" id="helpClose">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="banner warn">
+        <div class="banner-ic">!</div>
+        <div class="banner-body"><strong>Force-close the Polar Flow app on your phone.</strong><em>It hogs the Bluetooth connection exclusively. Cadence will fail to pair while Polar Flow is running.</em></div>
+      </div>
+      <div class="banner info">
+        <div class="banner-ic">i</div>
+        <div class="banner-body"><strong>Put the Verity Sense into sensor/broadcast mode.</strong><em>Brief button press cycles modes. You want a <strong>solid blue LED</strong> (green = recording only, will not broadcast). Long press = off.</em></div>
+      </div>
+      <div class="banner info">
+        <div class="banner-ic">i</div>
+        <div class="banner-body"><strong>Pin this tab.</strong><em>Right-click the tab → Pin. Chrome's tab discard manager will kill the BT connection when the tab goes idle in the background.</em></div>
+      </div>
+      <div class="banner info">
+        <div class="banner-ic">i</div>
+        <div class="banner-body"><strong>The device sleeps after ~1 minute idle.</strong><em>If you can't see it in the pairing dialog, re-press the button and wait for the solid blue LED again.</em></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="helpSkip">Skip next time</button>
+      <button class="btn btn-primary" id="helpGo">Continue to pairing</button>
+    </div>
+  </div>
+</div>
+
+<!-- Demo pane (shown when demo mode on) -->
+<div class="demo-pane not-widget" id="demoPane" style="display:none">
+  <span class="tag">Demo</span>
+  <span class="mut">Simulator running</span>
+  <button id="demoSpike">Trigger spike</button>
+  <button id="demoSlow">Slow calm</button>
+  <button id="demoOff">Stop</button>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CADENCE v0.1 — HRM Trading Companion
+═══════════════════════════════════════════════════════════ */
+
+/* ── Constants ── */
+const HRS_SERVICE_UUID = 0x180D;
+const HRM_CHAR_UUID    = 0x2A37;
+const SAMPLE_WINDOW_MS = 2 * 60 * 1000;   // 2-min scrolling chart
+const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
+const STALE_MS         = 6000;            // BPM grey-out after no update
+const LS_KEY           = 'cadence';
+
+/* Acute tier table — each tier fires once per excursion, cooldown enforced */
+const ACUTE_TIERS = [
+  { id:'A1', level:1, bpm:110, hold:60, msg:'Is this trade in your plan?',                      kind:'acute' },
+  { id:'A2', level:2, bpm:125, hold:30, msg:'Limit orders only. No market orders.',             kind:'acute' },
+  { id:'A3', level:3, bpm:140, hold:20, msg:'Hands off keyboard. Five minutes.',                kind:'acute' },
+  { id:'A4', level:4, bpm:155, hold:0,  msg:'Close positions via limit. No new trades today.',  kind:'acute' }
+];
+
+/* Chronic tier table — cumulative seconds at or above chronic threshold */
+const CHRONIC_TIERS = [
+  { id:'C1', level:1, sec:300,  msg:'Heart rate elevated. Breathe out.',                        kind:'chronic' },
+  { id:'C2', level:2, sec:600,  msg:'Feet on the floor. Step back from the screen.',            kind:'chronic' },
+  { id:'C3', level:3, sec:1200, msg:'Twenty minutes elevated. Stand up. Walk away.',            kind:'chronic' },
+  { id:'C4', level:4, sec:3600, msg:"You've been stressed an hour. Take fifteen.",              kind:'chronic' },
+  { id:'C5', level:5, sec:5400, msg:'Session over. Close platform. Walk away.',                 kind:'chronic' }
+];
+
+const DEESCALATE_MS       = 30000; // once below tier threshold for this, tier can re-arm
+const RECOVERY_BELOW_MS   = 30000; // below baseline this long → recovery cue
+const RECOVERY_COOLDOWN_MS= 5 * 60 * 1000;
+const EXCURSION_BPM       = 110;   // above this marks an "excursion" for recovery tracking
+
+/* ── Default settings ── */
+const DEFAULTS = {
+  voiceEnabled: true,
+  voiceEngine: 'web',       // 'web' | 'eleven'
+  voiceRate: 0.95,
+  voiceVol: 0.9,
+  baselineBpm: 85,
+  chronicBpm: 95,
+  cooldownSec: 90,
+  demoMode: false,
+  skipHelp: false
+};
+
+/* ── State ── */
+const S = {
+  settings: Object.assign({}, DEFAULTS),
+
+  // Connection
+  device: null,
+  characteristic: null,
+  connected: false,
+  connecting: false,
+
+  // Session
+  sessionStart: null,
+  samples: [],           // {t, bpm}
+  maxBpm: 0,
+  minBpm: 999,
+  sumBpm: 0,
+  nBpm: 0,
+  chronicSec: 0,         // cumulative seconds ≥ chronicBpm
+  lastTickTs: null,      // last timestamp we saw data for accumulating chronicSec
+  lastBpmTs: null,
+  currentBpm: null,
+  currentTier: 0,        // 0..4 highest fired (acute)
+
+  // Tier state per-tier
+  acuteState: {},        // { A1: { enteredAt, fired, firedAt, belowSince } }
+  chronicFired: {},
+
+  // Recovery
+  hadExcursion: false,
+  belowBaselineSince: null,
+  lastRecoveryAt: null,
+
+  // Log
+  log: [],
+
+  // Demo
+  demoTimer: null,
+  demoProfile: 'calm',
+
+  // TTS queue
+  speechQueue: [],
+  speaking: false
+};
+
+/* ═══════════════════════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════════════════════ */
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.settings){
+        S.settings = Object.assign({}, DEFAULTS, parsed.settings);
+      }
+    }
+  }catch(e){ console.warn('settings load failed', e); }
+}
+function saveSettings(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({ settings:S.settings, savedAt:Date.now() }));
+  }catch(e){ console.warn('settings save failed', e); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+function fmtClock(totalSec){
+  totalSec = Math.max(0, Math.floor(totalSec||0));
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  return (h?String(h).padStart(2,'0')+':':'') + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function fmtTimeHM(d){
+  const dt = new Date(d);
+  return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')+':'+String(dt.getSeconds()).padStart(2,'0');
+}
+function tierOfBpm(bpm){
+  if(bpm == null) return 0;
+  if(bpm >= 155) return 4;
+  if(bpm >= 140) return 3;
+  if(bpm >= 125) return 2;
+  if(bpm >= 110) return 1;
+  return 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SPEECH (Web SpeechSynthesis; ElevenLabs stubbed)
+═══════════════════════════════════════════════════════════ */
+function speak(msg, opts){
+  if(!S.settings.voiceEnabled) return;
+  opts = opts || {};
+  if(S.settings.voiceEngine === 'eleven'){
+    // Stub: fall back to web API with a gentle note in console
+    console.log('[Cadence] ElevenLabs stub — using Web SpeechSynthesis fallback. Configure in a future build.');
+  }
+  if(!('speechSynthesis' in window)) return;
+
+  // Higher-priority interruption
+  if(opts.interrupt){
+    try{ window.speechSynthesis.cancel(); }catch(e){}
+  }
+  const u = new SpeechSynthesisUtterance(msg);
+  u.rate   = S.settings.voiceRate;
+  u.volume = opts.volume != null ? opts.volume : S.settings.voiceVol;
+  u.pitch  = opts.pitch != null ? opts.pitch : 1.0;
+  // Prefer an English voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v => /en-GB/i.test(v.lang) && /male|daniel|oliver|arthur/i.test(v.name))
+            || voices.find(v => /en-US/i.test(v.lang) && /male|guy|daniel/i.test(v.name))
+            || voices.find(v => /^en/i.test(v.lang));
+  if(pref) u.voice = pref;
+  try{ window.speechSynthesis.speak(u); }catch(e){ console.warn('speech failed', e); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LOG + ALERT DISPATCH
+═══════════════════════════════════════════════════════════ */
+function fireTierCue(tier, interrupt){
+  // Logged once per fire
+  const entry = {
+    t: Date.now(),
+    id: tier.id,
+    level: tier.level,
+    kind: tier.kind,
+    bpm: S.currentBpm,
+    msg: tier.msg
+  };
+  S.log.push(entry);
+  renderLog();
+  speak(tier.msg, { interrupt: !!interrupt });
+}
+
+function fireRecovery(){
+  const entry = {
+    t: Date.now(),
+    id: 'REC',
+    level: 0,
+    kind: 'recovery',
+    bpm: S.currentBpm,
+    msg: 'Nice recovery.'
+  };
+  S.log.push(entry);
+  renderLog();
+  // Quieter and slightly lower pitch for positive cue
+  speak('Nice recovery.', { volume: Math.min(0.7, S.settings.voiceVol), pitch: 0.95 });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER ENGINE
+═══════════════════════════════════════════════════════════ */
+function initTierState(){
+  S.acuteState = {};
+  ACUTE_TIERS.forEach(t => {
+    S.acuteState[t.id] = { enteredAt:null, fired:false, firedAt:null, belowSince:null };
+  });
+  S.chronicFired = {};
+  CHRONIC_TIERS.forEach(t => { S.chronicFired[t.id] = false; });
+  S.hadExcursion = false;
+  S.belowBaselineSince = null;
+  S.lastRecoveryAt = null;
+}
+
+function tickAcute(bpm, now){
+  // Detect highest newly-firing tier this tick so we can fire it with interrupt priority
+  let newlyFired = null;
+
+  ACUTE_TIERS.forEach(t => {
+    const s = S.acuteState[t.id];
+    if(bpm >= t.bpm){
+      if(s.enteredAt === null) s.enteredAt = now;
+      s.belowSince = null;
+      const heldMs = now - s.enteredAt;
+      const cdMs = S.settings.cooldownSec * 1000;
+      if(!s.fired && heldMs >= t.hold * 1000){
+        if(s.firedAt === null || (now - s.firedAt) >= cdMs){
+          s.fired = true;
+          s.firedAt = now;
+          if(!newlyFired || t.level > newlyFired.level) newlyFired = t;
+        }
+      }
+    } else {
+      s.enteredAt = null;
+      if(s.belowSince === null) s.belowSince = now;
+      if(s.fired && (now - s.belowSince) >= DEESCALATE_MS){
+        s.fired = false;
+      }
+    }
+  });
+
+  if(newlyFired){
+    // Interrupt lower in-progress cue
+    fireTierCue(newlyFired, /*interrupt*/ true);
+  }
+
+  // Compute current highest-fired tier for UI
+  let cur = 0;
+  ACUTE_TIERS.forEach(t => {
+    const s = S.acuteState[t.id];
+    if(s.fired && t.level > cur) cur = t.level;
+  });
+  S.currentTier = cur;
+}
+
+function tickChronic(bpm, now){
+  // Accumulate cumulative time at or above chronic threshold
+  if(S.lastTickTs !== null){
+    const dt = Math.max(0, Math.min(5000, now - S.lastTickTs)); // clamp absurd gaps
+    if(bpm >= S.settings.chronicBpm){
+      S.chronicSec += dt / 1000;
+    }
+  }
+  S.lastTickTs = now;
+
+  // Check chronic tier thresholds
+  CHRONIC_TIERS.forEach(t => {
+    if(!S.chronicFired[t.id] && S.chronicSec >= t.sec){
+      S.chronicFired[t.id] = true;
+      fireTierCue(t, /*interrupt*/ false);
+    }
+  });
+}
+
+function tickRecovery(bpm, now){
+  if(bpm >= EXCURSION_BPM) S.hadExcursion = true;
+
+  if(bpm < S.settings.baselineBpm){
+    if(S.belowBaselineSince === null) S.belowBaselineSince = now;
+    const belowMs = now - S.belowBaselineSince;
+    if(S.hadExcursion && belowMs >= RECOVERY_BELOW_MS){
+      if(!S.lastRecoveryAt || (now - S.lastRecoveryAt) >= RECOVERY_COOLDOWN_MS){
+        fireRecovery();
+        S.lastRecoveryAt = now;
+        S.hadExcursion = false;
+      }
+    }
+  } else {
+    S.belowBaselineSince = null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HR HANDLER
+═══════════════════════════════════════════════════════════ */
+function onBpm(bpm, ts){
+  const now = ts || Date.now();
+  if(S.sessionStart === null){
+    S.sessionStart = now;
+    S.lastTickTs = null;
+    initTierState();
+  }
+
+  bpm = Math.max(0, Math.min(250, bpm|0));
+  S.currentBpm  = bpm;
+  S.lastBpmTs   = now;
+
+  // Session aggregates
+  if(bpm > 0){
+    if(bpm > S.maxBpm) S.maxBpm = bpm;
+    if(bpm < S.minBpm) S.minBpm = bpm;
+    S.sumBpm += bpm;
+    S.nBpm   += 1;
+  }
+
+  // Samples for chart
+  S.samples.push({ t: now, bpm });
+  while(S.samples.length > MAX_SAMPLES) S.samples.shift();
+  const cutoff = now - SAMPLE_WINDOW_MS;
+  while(S.samples.length && S.samples[0].t < cutoff) S.samples.shift();
+
+  // Tier engines
+  tickAcute(bpm, now);
+  tickChronic(bpm, now);
+  tickRecovery(bpm, now);
+
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WEB BLUETOOTH
+═══════════════════════════════════════════════════════════ */
+async function connectSensor(){
+  if(S.connecting || S.connected) return;
+  if(S.settings.demoMode){ startDemo(); return; }
+
+  if(!navigator.bluetooth){
+    setBanner('err', 'Web Bluetooth not available',
+      "This browser doesn't expose the Web Bluetooth API. Use Chrome or Edge. On macOS you may need to enable chrome://flags/#enable-experimental-web-platform-features.");
+    return;
+  }
+
+  S.connecting = true;
+  setConnStatus('connecting', 'Requesting device…');
+
+  try{
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [HRS_SERVICE_UUID] }],
+      optionalServices: [HRS_SERVICE_UUID]
+    });
+
+    S.device = device;
+    device.addEventListener('gattserverdisconnected', onGattDisconnect);
+
+    setConnStatus('connecting', 'Connecting GATT…');
+    const server = await device.gatt.connect();
+
+    const service = await server.getPrimaryService(HRS_SERVICE_UUID);
+    const char = await service.getCharacteristic(HRM_CHAR_UUID);
+    S.characteristic = char;
+
+    char.addEventListener('characteristicvaluechanged', onCharValue);
+    await char.startNotifications();
+
+    S.connected = true;
+    S.connecting = false;
+    setConnStatus('conn', device.name || 'Polar HR sensor');
+    $('btnConnect').style.display = 'none';
+    $('btnDisconnect').style.display = '';
+    $('btnExportCsv').disabled = false;
+    $('sessStat').style.display = '';
+    clearBanner();
+    setBanner('ok', 'Sensor connected',
+      'Fold Cadence into a corner of your trading monitor. Right-click this tab → <strong>Pin tab</strong> so Chrome never discards the connection.');
+  }catch(err){
+    S.connecting = false;
+    setConnStatus('idle', 'Not connected');
+    if(err && /cancelled/i.test(err.message || '')){
+      // user cancelled, silent
+      return;
+    }
+    setBanner('err', 'Pairing failed', err && err.message ? err.message : 'Unknown error. Make sure the Verity Sense shows a <strong>solid blue LED</strong> and Polar Flow on your phone is force-closed.');
+  }
+}
+
+function onCharValue(e){
+  const v = e.target.value;
+  const flags = v.getUint8(0);
+  let bpm;
+  if((flags & 0x01) === 0){
+    bpm = v.getUint8(1);
+  } else {
+    bpm = v.getUint16(1, /*little*/ true);
+  }
+  onBpm(bpm);
+}
+
+function onGattDisconnect(){
+  S.connected = false;
+  S.characteristic = null;
+  setConnStatus('err', 'Sensor disconnected — re-press the device button');
+  $('btnConnect').style.display = '';
+  $('btnDisconnect').style.display = 'none';
+  setBanner('warn', 'Sensor disconnected',
+    'Verity Sense sleeps after ~1 minute idle. Re-press its button until you see the <strong>solid blue LED</strong>, then click <strong>Connect sensor</strong> again.');
+}
+
+async function disconnectSensor(){
+  try{
+    if(S.characteristic){
+      try{ await S.characteristic.stopNotifications(); }catch(e){}
+    }
+    if(S.device && S.device.gatt && S.device.gatt.connected){
+      S.device.gatt.disconnect();
+    }
+  }catch(e){}
+  if(S.demoTimer){ stopDemo(); }
+  S.connected = false;
+  S.characteristic = null;
+  setConnStatus('idle', 'Not connected');
+  $('btnConnect').style.display = '';
+  $('btnDisconnect').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DEMO MODE
+═══════════════════════════════════════════════════════════ */
+let demoTarget = 72;
+let demoCur = 72;
+function startDemo(){
+  stopDemo();
+  S.connected = true;
+  setConnStatus('conn', 'Demo simulator');
+  $('btnConnect').style.display = 'none';
+  $('btnDisconnect').style.display = '';
+  $('btnExportCsv').disabled = false;
+  $('sessStat').style.display = '';
+  $('demoPane').style.display = '';
+  demoCur = 72; demoTarget = 72;
+  S.demoProfile = 'calm';
+  S.demoTimer = setInterval(demoTick, 1000);
+  clearBanner();
+  setBanner('info', 'Demo mode active',
+    'Simulated HR stream. Use <strong>Trigger spike</strong> to test acute tiers, or let it idle to exercise chronic accumulation. Disable demo mode in Settings to return to real sensor pairing.');
+}
+function stopDemo(){
+  if(S.demoTimer){ clearInterval(S.demoTimer); S.demoTimer = null; }
+  $('demoPane').style.display = 'none';
+}
+function demoTick(){
+  // Drift demoCur toward demoTarget with some jitter
+  const diff = demoTarget - demoCur;
+  demoCur += diff * 0.12 + (Math.random() - 0.5) * 1.8;
+  const bpm = Math.max(45, Math.min(190, Math.round(demoCur)));
+  onBpm(bpm);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UI RENDERING
+═══════════════════════════════════════════════════════════ */
+function setConnStatus(kind, text){
+  const el = $('connStat');
+  el.classList.remove('conn','err');
+  if(kind === 'conn') el.classList.add('conn');
+  else if(kind === 'err') el.classList.add('err');
+  $('connText').textContent = text;
+}
+
+function renderAll(){
+  renderHero();
+  renderStats();
+  renderChart();
+  renderTierLadders();
+  renderWidget();
+  renderSessionClock();
+}
+
+function renderHero(){
+  const bpmEl = $('bpmBig');
+  const hero  = $('heroBpm');
+  const now   = Date.now();
+  const stale = !S.currentBpm || (S.lastBpmTs && (now - S.lastBpmTs) > STALE_MS);
+
+  bpmEl.textContent = S.currentBpm ? String(S.currentBpm) : '—';
+  bpmEl.classList.toggle('stale', !!stale);
+  bpmEl.className = 'bpm-big' + (stale ? ' stale' : '') + (S.currentBpm ? ' t-'+S.currentTier : '');
+  hero.className  = 'hero-bpm tier-'+S.currentTier;
+
+  const labels = ['Baseline','Warm','Elevated','High','Critical'];
+  const lbl = S.currentBpm ? labels[S.currentTier] : 'Awaiting sensor';
+  const badge = $('tierBadge');
+  badge.className = 'tier-badge' + (S.currentBpm ? ' t-'+S.currentTier : '');
+  $('tierLabel').textContent = lbl;
+  $('bpmSub').textContent = S.currentBpm
+    ? (S.currentTier === 0 ? 'within baseline range' : 'above tier '+S.currentTier+' threshold')
+    : 'awaiting connection';
+}
+
+function renderStats(){
+  const avg = S.nBpm > 0 ? Math.round(S.sumBpm / S.nBpm) : null;
+  $('scAvg').textContent  = avg != null ? avg : '—';
+  $('scPeak').textContent = S.maxBpm > 0 ? S.maxBpm : '—';
+  $('scPeakSub').textContent = S.maxBpm > 0
+    ? ('tier ' + tierOfBpm(S.maxBpm))
+    : '—';
+  $('scTime').textContent = fmtClock(S.chronicSec);
+}
+
+function renderSessionClock(){
+  if(S.sessionStart){
+    const sec = Math.floor((Date.now() - S.sessionStart) / 1000);
+    $('sessText').textContent = 'Session ' + fmtClock(sec);
+  }
+}
+
+/* ── CHART ── */
+function renderChart(){
+  const c = $('chartCanvas');
+  if(!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = c.clientWidth, cssH = c.clientHeight;
+  if(c.width !== cssW * dpr || c.height !== cssH * dpr){
+    c.width = cssW * dpr; c.height = cssH * dpr;
+  }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+
+  // Background grid
+  const padL = 36, padR = 10, padT = 10, padB = 20;
+  const w = cssW - padL - padR, h = cssH - padT - padB;
+  const minY = 50, maxY = 170;
+  const yAt = bpm => padT + h * (1 - (bpm - minY) / (maxY - minY));
+  const now = Date.now();
+  const t0 = now - SAMPLE_WINDOW_MS;
+  const xAt = t => padL + w * ((t - t0) / SAMPLE_WINDOW_MS);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for(let v=60; v<=160; v+=20){
+    const y = yAt(v);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+w, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(v), padL-5, y+3);
+  }
+
+  // Tier threshold lines
+  const tierColors = ['#d9a85c','#e68a46','#df5f56','#c12f4a'];
+  [110,125,140,155].forEach((v,i) => {
+    const y = yAt(v);
+    ctx.strokeStyle = tierColors[i] + '66';
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+w, y); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  // chronic threshold (dotted green)
+  {
+    const y = yAt(S.settings.chronicBpm);
+    ctx.strokeStyle = 'rgba(123,168,144,0.35)';
+    ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+w, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(123,168,144,0.55)';
+    ctx.font = '9px Instrument Sans';
+    ctx.textAlign = 'left';
+    ctx.fillText('chronic ' + S.settings.chronicBpm, padL+6, y-3);
+  }
+
+  // BPM line
+  const samples = S.samples;
+  if(samples.length >= 2){
+    ctx.strokeStyle = '#7ba890';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    let started = false;
+    samples.forEach(s => {
+      if(s.t < t0) return;
+      const x = xAt(s.t), y = yAt(Math.max(minY, Math.min(maxY, s.bpm)));
+      if(!started){ ctx.moveTo(x,y); started = true; }
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // Fill under line (faint)
+    ctx.lineTo(xAt(samples[samples.length-1].t), padT+h);
+    ctx.lineTo(xAt(samples[0].t < t0 ? t0 : samples[0].t), padT+h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(123,168,144,0.08)';
+    ctx.fill();
+  }
+
+  // x-axis ticks (every 30s)
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  for(let s=0; s<=120; s+=30){
+    const t = now - (120-s)*1000;
+    const x = xAt(t);
+    ctx.fillText('−'+(120-s)+'s', x, padT+h+14);
+  }
+
+  $('chartRange').textContent = samples.length + ' samples';
+}
+
+/* ── TIER LADDERS ── */
+function renderTierLadders(){
+  const ae = $('acuteTiers'); if(!ae) return;
+  const now = Date.now();
+  const acuteHtml = ACUTE_TIERS.map(t => {
+    const s = S.acuteState[t.id] || {};
+    const held = s.enteredAt ? Math.min(t.hold, Math.floor((now - s.enteredAt)/1000)) : 0;
+    const pct  = t.hold === 0 ? (s.fired ? 100 : 0) : Math.round(held / t.hold * 100);
+    const armed = S.currentBpm && S.currentBpm >= t.bpm && !s.fired;
+    const klass = 't-chip c-'+t.level + (s.fired?' fired':'') + (armed?' armed':'');
+    return `
+      <div class="tier-row ${s.fired?'fired':''} ${armed?'armed':''}" style="color:var(--t${t.level})">
+        <div class="${klass}"><span>${t.id}</span></div>
+        <div class="t-body">
+          <div class="t-cond">&gt; ${t.bpm} bpm · ${t.hold>0?'sustained '+t.hold+'s':'any duration'}</div>
+          <div class="t-msg">${t.msg}</div>
+        </div>
+        <div class="t-meter">
+          <div class="t-bar"><div class="t-barfill" style="width:${pct}%"></div></div>
+          <div class="t-time">${t.hold>0?(held+'s / '+t.hold+'s'):(s.fired?'fired':'—')}</div>
+        </div>
+      </div>`;
+  }).join('');
+  ae.innerHTML = acuteHtml;
+
+  const ce = $('chronicTiers');
+  const chronicHtml = CHRONIC_TIERS.map(t => {
+    const fired = !!S.chronicFired[t.id];
+    const pct = Math.min(100, Math.round(S.chronicSec / t.sec * 100));
+    const close = !fired && pct >= 85;
+    const klass = 't-chip c-'+Math.min(4,t.level) + (fired?' fired':'') + (close?' armed':'');
+    const mLabel = (t.sec>=60) ? (t.sec/60)+' min' : (t.sec+'s');
+    return `
+      <div class="tier-row ${fired?'fired':''} ${close?'armed':''}" style="color:var(--t${Math.min(4,t.level)})">
+        <div class="${klass}"><span>${t.id}</span></div>
+        <div class="t-body">
+          <div class="t-cond">≥ ${S.settings.chronicBpm} bpm · cumulative ${mLabel}</div>
+          <div class="t-msg">${t.msg}</div>
+        </div>
+        <div class="t-meter">
+          <div class="t-bar"><div class="t-barfill" style="width:${pct}%"></div></div>
+          <div class="t-time">${fmtClock(Math.min(S.chronicSec, t.sec))} / ${mLabel}</div>
+        </div>
+      </div>`;
+  }).join('');
+  ce.innerHTML = chronicHtml;
+
+  // state pills
+  const anyAcute = ACUTE_TIERS.some(t => S.acuteState[t.id] && S.acuteState[t.id].fired);
+  const ap = $('acuteStatePill');
+  ap.textContent = anyAcute ? 'tier '+S.currentTier+' active' : (S.connected ? 'armed' : 'standby');
+  ap.className = 'pill' + (S.connected ? ' live' : '');
+
+  const anyChronic = CHRONIC_TIERS.some(t => S.chronicFired[t.id]);
+  const cp = $('chronicStatePill');
+  cp.textContent = anyChronic ? 'tier active' : (S.connected ? 'armed' : 'standby');
+  cp.className = 'pill' + (S.connected ? ' live' : '');
+}
+
+/* ── LOG ── */
+function renderLog(){
+  const el = $('logList'); if(!el) return;
+  if(!S.log.length){
+    el.innerHTML = '<div class="log-empty">No alerts fired yet — tier cues will appear here.</div>';
+    $('logCount').textContent = '0 events';
+    return;
+  }
+  $('logCount').textContent = S.log.length + ' event' + (S.log.length===1?'':'s');
+  // newest first
+  const rows = [...S.log].reverse().map(e => {
+    const dotKind = e.kind === 'recovery' ? 'r' : Math.min(4, e.level);
+    const tagTxt = e.kind === 'recovery' ? 'RECOVERY' : (e.kind === 'acute' ? 'ACUTE '+e.id : 'CHRONIC '+e.id);
+    return `
+      <div class="log-row">
+        <div class="log-t">${fmtTimeHM(e.t)}</div>
+        <div class="log-d c-${dotKind}"></div>
+        <div class="log-msg">“${e.msg}”</div>
+        <div class="log-tag">${tagTxt} · ${e.bpm||'—'}bpm</div>
+      </div>`;
+  }).join('');
+  el.innerHTML = rows;
+}
+
+/* ── WIDGET ── */
+function renderWidget(){
+  const now = Date.now();
+  const stale = !S.currentBpm || (S.lastBpmTs && (now - S.lastBpmTs) > STALE_MS);
+  const wBpm = $('wBpm');
+  wBpm.textContent = S.currentBpm || '—';
+  wBpm.className = 'w-bpm' + (stale?' stale':'') + (S.currentBpm ? ' t-'+S.currentTier : '');
+  const labels = ['Baseline','Warm','Elevated','High','Critical'];
+  $('wBadgeText').textContent = S.currentBpm ? labels[S.currentTier] : 'Standby';
+  $('wBadge').className = 'w-badge' + (S.currentBpm ? ' t-'+S.currentTier : '');
+  $('wPeak').textContent = S.maxBpm > 0 ? S.maxBpm : '—';
+  $('wTime').textContent = fmtClock(S.chronicSec);
+  $('widgetBox').className = 'widget-box tier-'+S.currentTier;
+
+  // Spark
+  const c = $('wSpark'); if(!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = c.clientWidth || 144, cssH = c.clientHeight || 40;
+  if(c.width !== cssW*dpr || c.height !== cssH*dpr){ c.width = cssW*dpr; c.height = cssH*dpr; }
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+  const samples = S.samples;
+  if(samples.length >= 2){
+    const minB = 55, maxB = 165;
+    const t0 = now - SAMPLE_WINDOW_MS;
+    ctx.strokeStyle = S.currentTier>0 ? ['#7ba890','#d9a85c','#e68a46','#df5f56','#c12f4a'][S.currentTier] : '#7ba890';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    let started = false;
+    samples.forEach(s => {
+      if(s.t < t0) return;
+      const x = cssW * (s.t - t0) / SAMPLE_WINDOW_MS;
+      const y = cssH * (1 - (Math.max(minB, Math.min(maxB, s.bpm)) - minB) / (maxB - minB));
+      if(!started){ ctx.moveTo(x,y); started = true; }
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BANNERS
+═══════════════════════════════════════════════════════════ */
+let activeBanner = null;
+function setBanner(kind, title, bodyHtml){
+  activeBanner = { kind, title, bodyHtml };
+  const el = $('banners');
+  el.innerHTML =
+    `<div class="banner ${kind}">
+      <div class="banner-ic">${kind==='err'?'!':kind==='warn'?'!':kind==='ok'?'✓':'i'}</div>
+      <div class="banner-body"><strong>${title}</strong><em>${bodyHtml}</em></div>
+      <button class="banner-close" id="bnClose">✕</button>
+    </div>`;
+  const bc = $('bnClose');
+  if(bc) bc.onclick = clearBanner;
+}
+function clearBanner(){
+  activeBanner = null;
+  $('banners').innerHTML = '';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CSV EXPORT (TradeLog-compatible unix ms timestamps)
+═══════════════════════════════════════════════════════════ */
+function exportCsv(){
+  if(!S.sessionStart){ alert('No session to export yet.'); return; }
+  const rows = [];
+  // Header — two files in one: samples + events (separated by blank line)
+  rows.push('# Cadence session export');
+  rows.push('# sessionStartUnixMs,'+S.sessionStart);
+  rows.push('# sessionEndUnixMs,'+Date.now());
+  rows.push('# baselineBpm,'+S.settings.baselineBpm);
+  rows.push('# chronicBpm,'+S.settings.chronicBpm);
+  rows.push('');
+  rows.push('section,unixMs,isoTime,bpm,tier,note');
+
+  // Samples
+  S.samples.forEach(s => {
+    rows.push('sample,'+s.t+','+new Date(s.t).toISOString()+','+s.bpm+','+tierOfBpm(s.bpm)+',');
+  });
+  // Events
+  S.log.forEach(e => {
+    const note = (e.kind + ' ' + e.id + ' ' + e.msg).replace(/,/g,';').replace(/\r?\n/g,' ');
+    rows.push('event,'+e.t+','+new Date(e.t).toISOString()+','+(e.bpm||'')+','+(e.level||0)+',"'+note+'"');
+  });
+
+  const blob = new Blob([rows.join('\n')], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fname = 'cadence-session-' + new Date(S.sessionStart).toISOString().replace(/[:.]/g,'-').slice(0,19) + '.csv';
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SESSION RESET
+═══════════════════════════════════════════════════════════ */
+function clearSession(){
+  if(S.nBpm > 0 && !confirm('Clear the current session? Samples and event log will be discarded.')) return;
+  S.sessionStart = null;
+  S.samples = [];
+  S.log = [];
+  S.maxBpm = 0; S.minBpm = 999;
+  S.sumBpm = 0; S.nBpm = 0;
+  S.chronicSec = 0;
+  S.lastTickTs = null;
+  S.lastBpmTs = null;
+  S.currentBpm = null;
+  S.currentTier = 0;
+  initTierState();
+  renderAll();
+  renderLog();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VIEW MODE (dashboard / widget)
+═══════════════════════════════════════════════════════════ */
+function setView(mode){
+  if(mode === 'widget'){
+    document.body.classList.add('widget');
+  } else {
+    document.body.classList.remove('widget');
+  }
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === mode));
+  // resize canvases next frame
+  requestAnimationFrame(() => { renderChart(); renderWidget(); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS MODAL
+═══════════════════════════════════════════════════════════ */
+function openSettings(){
+  $('setVoiceEn').checked = S.settings.voiceEnabled;
+  $('setRate').value = S.settings.voiceRate; $('setRateVal').textContent = S.settings.voiceRate;
+  $('setVol').value  = S.settings.voiceVol;  $('setVolVal').textContent  = S.settings.voiceVol;
+  $('setBaseline').value = S.settings.baselineBpm;
+  $('setChronic').value  = S.settings.chronicBpm;
+  $('setCooldown').value = S.settings.cooldownSec; $('setCdVal').textContent = S.settings.cooldownSec;
+  $('setDemoMode').checked = S.settings.demoMode;
+  document.querySelectorAll('[data-engine]').forEach(b => b.classList.toggle('on', b.dataset.engine === S.settings.voiceEngine));
+  $('setModal').classList.add('on');
+}
+function closeSettings(){ $('setModal').classList.remove('on'); }
+function saveSettingsFromUI(){
+  S.settings.voiceEnabled = $('setVoiceEn').checked;
+  S.settings.voiceRate    = parseFloat($('setRate').value);
+  S.settings.voiceVol     = parseFloat($('setVol').value);
+  S.settings.baselineBpm  = parseInt($('setBaseline').value, 10) || DEFAULTS.baselineBpm;
+  S.settings.chronicBpm   = parseInt($('setChronic').value, 10)  || DEFAULTS.chronicBpm;
+  S.settings.cooldownSec  = parseInt($('setCooldown').value, 10) || DEFAULTS.cooldownSec;
+  S.settings.demoMode     = $('setDemoMode').checked;
+  saveSettings();
+  closeSettings();
+  renderAll();
+}
+function resetSettingsToDefaults(){
+  S.settings = Object.assign({}, DEFAULTS);
+  saveSettings();
+  openSettings();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VISIBILITY WARNING
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && S.connected && !S.settings.demoMode){
+    console.warn('[Cadence] Tab backgrounded — BT connection may be discarded. Pin this tab.');
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   INIT + WIRING
+═══════════════════════════════════════════════════════════ */
+function wire(){
+  $('btnConnect').onclick = () => {
+    if(S.settings.skipHelp || S.settings.demoMode){ connectSensor(); }
+    else { $('helpModal').classList.add('on'); }
+  };
+  $('btnDisconnect').onclick = disconnectSensor;
+  $('helpClose').onclick = () => $('helpModal').classList.remove('on');
+  $('helpSkip').onclick  = () => { S.settings.skipHelp = true; saveSettings(); $('helpModal').classList.remove('on'); connectSensor(); };
+  $('helpGo').onclick    = () => { $('helpModal').classList.remove('on'); connectSensor(); };
+
+  $('btnSettings').onclick = openSettings;
+  $('setClose').onclick    = closeSettings;
+  $('setSave').onclick     = saveSettingsFromUI;
+  $('setReset').onclick    = resetSettingsToDefaults;
+  $('setVoiceTest').onclick= () => speak('Is this trade in your plan?', { interrupt:true });
+
+  $('setRate').oninput = e => $('setRateVal').textContent = parseFloat(e.target.value).toFixed(2);
+  $('setVol').oninput  = e => $('setVolVal').textContent  = parseFloat(e.target.value).toFixed(2);
+  $('setCooldown').oninput = e => $('setCdVal').textContent = e.target.value;
+
+  document.querySelectorAll('[data-engine]').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('[data-engine]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      S.settings.voiceEngine = b.dataset.engine;
+    };
+  });
+
+  $('viewSeg').addEventListener('click', e => {
+    const b = e.target.closest('[data-view]');
+    if(b) setView(b.dataset.view);
+  });
+  $('wExit').onclick = () => setView('dash');
+
+  $('btnExportCsv').onclick = exportCsv;
+  $('btnClearLog').onclick  = clearSession;
+
+  $('demoSpike').onclick = () => { demoTarget = 148; setTimeout(()=>demoTarget=95, 30000); };
+  $('demoSlow').onclick  = () => { demoTarget = 65; };
+  $('demoOff').onclick   = () => { disconnectSensor(); };
+
+  // Close modals on backdrop click
+  document.querySelectorAll('.mbg').forEach(m => {
+    m.addEventListener('click', e => { if(e.target === m) m.classList.remove('on'); });
+  });
+
+  // Warm up speech voices (some browsers lazy-load)
+  if('speechSynthesis' in window){
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+}
+
+function preflightBanner(){
+  if(!navigator.bluetooth){
+    setBanner('err', 'Web Bluetooth unavailable',
+      "Cadence needs Chrome or Edge on desktop. Safari and Firefox do not expose the Web Bluetooth API. On macOS you may need <code>chrome://flags/#enable-experimental-web-platform-features</code>.");
+    $('btnConnect').disabled = true;
+    return;
+  }
+  setBanner('info', 'Ready to pair',
+    'Click <strong>Connect sensor</strong>. Make sure the Verity Sense shows a <strong>solid blue LED</strong> (broadcast mode) and the Polar Flow phone app is force-closed.');
+}
+
+function tickUi(){
+  // Keep the session clock + stale state fresh even when no new sample arrives
+  if(S.connected){
+    renderHero();
+    renderSessionClock();
+    renderWidget();
+  }
+}
+
+function init(){
+  loadSettings();
+  initTierState();
+  renderAll();
+  renderLog();
+  wire();
+  preflightBanner();
+
+  setInterval(tickUi, 1000);
+
+  // Chart relies on animation frame for scroll when no new samples
+  setInterval(() => { if(S.connected) renderChart(); }, 1000);
+
+  // Resize
+  window.addEventListener('resize', () => { renderChart(); renderWidget(); });
+}
+
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
 </body>
 </html>
