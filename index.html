@@ -540,8 +540,13 @@ body.widget .widget-only{display:flex!important}
       </div>
 
       <div class="sec">
-        <div class="sec-ti">Cross-Device</div>
-        <div class="fld-h" style="line-height:1.6">The app itself and its bundled audio work on any Chrome/Edge browser at <span class="mono">cadence-umber.vercel.app</span>. Your settings, Pulsoid token, and custom audio uploads live in this browser's localStorage only. Sign into Chrome with Google account sync to carry them across machines, or re-enter them on each device.</div>
+        <div class="sec-ti">Cross-Device Sync</div>
+        <div class="fld-h" style="line-height:1.6;margin-bottom:10px">The app and this HTML load from <span class="mono">cadence-umber.vercel.app</span> on any Chrome/Edge browser. Your settings, Pulsoid token, and custom audio uploads live in this browser's localStorage. Use the buttons below to export a single backup file (includes your uploaded audio encoded as base64) and import it on another device.</div>
+        <div class="fld fld-row">
+          <button class="btn btn-sm" id="setExport">Export settings + audio</button>
+          <button class="btn btn-sm" id="setImport">Import backup…</button>
+        </div>
+        <div class="fld-h" style="margin-top:10px;line-height:1.5;color:var(--tx3);font-style:italic">Full automatic cloud sync (upload once, plays everywhere without a manual backup step) requires a Firebase project or a Vercel serverless function. Tell me which you want and I'll wire it up.</div>
       </div>
 
       <div class="sec">
@@ -646,20 +651,16 @@ const LS_KEY           = 'cadence';
    without displacing the v0.4 messages — the old A2/A3/A4 shift to A3/A4/A5.
    Per-tier cooldown overrides the default; higher tiers interrupt lower; each fires once per excursion. */
 const ACUTE_TIERS = [
-  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                kind:'acute' },
-  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, close it. Zoom out your timeframes. Limit orders only.",   kind:'acute' },
-  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                       kind:'acute' },
-  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Close positions via limit.',                                                                   kind:'acute' },
-  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                        kind:'acute' }
+  { id:'A1', level:1, bpm:95,  hold:45,                msg:'Is this trade in your plan?',                                                                                   kind:'acute' },
+  { id:'A2', level:2, bpm:100, hold:0,  cooldown:300,  msg:"Elevated heart rate. If you're in a market order, close it out. Zoom out your timeframes. Limit orders only.", kind:'acute' },
+  { id:'A3', level:3, bpm:105, hold:20,                msg:'Breathe. Stick to your limit orders.',                                                                          kind:'acute' },
+  { id:'A4', level:4, bpm:115, hold:10,                msg:'Stop trading. Close out positions via limit.',                                                                  kind:'acute' },
+  { id:'A5', level:5, bpm:120, hold:0,                 msg:'Get off the computer. Session over.',                                                                           kind:'acute' }
 ];
 
-/* Bundled audio files. Mapping shifted in v0.6 because A2/A3/A4 renamed to A3/A4/A5. */
-const AUDIO_ASSETS = {
-  'A3':  'audio/a2-breathe-limit-orders.m4a',
-  'A4':  'audio/a4-stop-trading.m4a',         // "stop trading" audio plays at A4 tier
-  'A5':  'audio/a3-get-off-computer.m4a',     // "get off computer" audio plays at A5 tier
-  'REC': 'audio/recovery-great-recovery.m4a'
-};
+/* Bundled audio files. v0.8: emptied — every slot now defaults to TTS until the user uploads.
+   User-uploaded audio (stored in S.settings.customAudio) overrides TTS. */
+const AUDIO_ASSETS = {};
 
 /* Slot IDs that accept custom audio uploads, in display order. Scheduled alerts appended. */
 const CUE_SLOTS = [
@@ -685,7 +686,7 @@ const SCHEDULED_ALERTS = [
   { id:'SA_1130', hour:11, minute:30, msg:'London close.',                                          label:'11:30 AM · London close' },
   { id:'SA_1200', hour:12, minute:0,  msg:'Take a lunch break.',                                    label:'12:00 PM · Lunch' },
   { id:'SA_1500', hour:15, minute:0,  msg:'Power hour.',                                            label:'3:00 PM · Power hour' },
-  { id:'SA_1545', hour:15, minute:45, msg:'Five minutes till the closing algo. Close your positions.', label:'3:45 PM · 5 min to algo' },
+  { id:'SA_1545', hour:15, minute:45, msg:'Five minutes till the closing algo. Close out your positions.', label:'3:45 PM · 5 min to algo' },
   { id:'SA_1550', hour:15, minute:50, msg:'Ten minutes until market close.',                        label:'3:50 PM · Closing algo window' },
   { id:'SA_1600', hour:16, minute:0,  msg:'Market close.',                                          label:'4:00 PM · Market close' },
   { id:'SA_1945', hour:19, minute:45, msg:'Fifteen minutes till Asia market open.',                 label:'7:45 PM · 15 min to Asia' },
@@ -2024,6 +2025,67 @@ function clearCustomAudioForSlot(slotId){
   saveSettings();
   renderAudioSlots();
 }
+
+/* Export full settings (including base64 custom audio) to a JSON backup file */
+function exportSettingsBackup(){
+  const payload = {
+    cadenceVersion: '0.8',
+    exportedAt: new Date().toISOString(),
+    settings: S.settings
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cadence-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+}
+
+/* Import a JSON backup and merge into settings */
+function importSettingsBackup(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = () => {
+    const f = input.files && input.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const payload = JSON.parse(reader.result);
+        if(!payload || !payload.settings){
+          alert('That doesn\'t look like a Cadence backup file.');
+          return;
+        }
+        const customCount = payload.settings.customAudio
+          ? Object.keys(payload.settings.customAudio).length
+          : 0;
+        const msg = 'Restore backup from ' + (payload.exportedAt || 'unknown date') +
+                    '?\n\nThis will overwrite your current settings, including:\n' +
+                    '• Pulsoid token\n' +
+                    '• All slider and toggle values\n' +
+                    '• ' + customCount + ' custom audio uploads';
+        if(!confirm(msg)) return;
+        S.settings = Object.assign({}, DEFAULTS, payload.settings);
+        try{
+          saveSettings();
+        }catch(err){
+          alert('Could not save — browser storage full. The backup may have too many large audio files for this browser.');
+          return;
+        }
+        closeSettings();
+        renderAll();
+        alert('Backup restored. Custom audio uploads are back in place.');
+      }catch(err){
+        alert('Failed to parse backup file: ' + (err && err.message || err));
+      }
+    };
+    reader.onerror = () => alert('Could not read file.');
+    reader.readAsText(f);
+  };
+  input.click();
+}
 function closeSettings(){ $('setModal').classList.remove('on'); }
 function saveSettingsFromUI(){
   S.settings.voiceEnabled = $('setVoiceEn').checked;
@@ -2103,6 +2165,8 @@ function wire(){
   });
 
   $('setPulsoidTest').onclick = testPulsoidToken;
+  $('setExport').onclick = exportSettingsBackup;
+  $('setImport').onclick = importSettingsBackup;
 
   $('viewSeg').addEventListener('click', e => {
     const b = e.target.closest('[data-view]');
