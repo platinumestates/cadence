@@ -357,10 +357,10 @@ body.widget .widget-only{display:flex!important}
       <div class="ct">Scrolling 2-minute window<em id="chartRange">0 samples</em></div>
       <div class="ct-right">
         <span><span class="legend-d" style="background:var(--t0)"></span>BPM</span>
-        <span><span class="legend-d" style="background:var(--t1);opacity:.6"></span>A1 110</span>
-        <span><span class="legend-d" style="background:var(--t2);opacity:.6"></span>A2 125</span>
-        <span><span class="legend-d" style="background:var(--t3);opacity:.6"></span>A3 140</span>
-        <span><span class="legend-d" style="background:var(--t4);opacity:.6"></span>A4 155</span>
+        <span><span class="legend-d" style="background:var(--t1);opacity:.6"></span>A1 95</span>
+        <span><span class="legend-d" style="background:var(--t2);opacity:.6"></span>A2 105</span>
+        <span><span class="legend-d" style="background:var(--t3);opacity:.6"></span>A3 115</span>
+        <span><span class="legend-d" style="background:var(--t4);opacity:.6"></span>A4 120</span>
       </div>
     </div>
     <div class="chart-wrap"><canvas id="chartCanvas" width="900" height="220"></canvas></div>
@@ -455,12 +455,17 @@ body.widget .widget-only{display:flex!important}
         </div>
         <div class="fld">
           <label class="fld-lbl">Engine</label>
-          <div class="seg" style="display:inline-flex">
-            <button class="seg-b on" data-engine="web">Web SpeechSynthesis (free)</button>
+          <div class="seg" style="display:inline-flex;flex-wrap:wrap">
+            <button class="seg-b" data-engine="audio">Custom audio (recorded)</button>
+            <button class="seg-b" data-engine="web">Web SpeechSynthesis (free)</button>
             <button class="seg-b" data-engine="eleven">ElevenLabs (stubbed)</button>
           </div>
-          <div class="fld-h">ElevenLabs integration is stubbed in v0.1. Add an API key to activate in a future build. Recommended voice: Daniel (British) — stability 50–60, similarity 70–80.</div>
+          <div class="fld-h">Custom audio plays your recorded m4a files for A2, A3, A4, and recovery (A1 and chronic tiers fall back to TTS since no audio is recorded for them). Web SpeechSynthesis uses the browser's built-in voice.</div>
         </div>
+        <div class="fld fld-row">
+          <label class="sw"><input type="checkbox" id="setEntryPing" checked><span class="sw-t"></span><span>Entry ping on zone crossing</span></label>
+        </div>
+        <div class="fld-h" style="margin-top:-6px">Short ascending chime (C5 → C6) when you cross into a higher tier band — fires before the sustain cue so you know something changed. 30-second debounce per tier.</div>
         <div class="fld">
           <label class="fld-lbl">Speech rate <span class="mono mut" id="setRateVal">0.95</span></label>
           <input class="rng" type="range" id="setRate" min="0.7" max="1.2" step="0.05" value="0.95">
@@ -470,8 +475,9 @@ body.widget .widget-only{display:flex!important}
           <input class="rng" type="range" id="setVol" min="0" max="1" step="0.05" value="0.9">
         </div>
         <div class="fld">
-          <button class="btn btn-sm" id="setVoiceTest">Test voice</button>
-          <span class="fld-h" style="display:inline-block;margin-left:10px">Plays "Is this trade in your plan?"</span>
+          <button class="btn btn-sm" id="setVoiceTest">Test cue</button>
+          <button class="btn btn-sm" id="setPingTest">Test entry ping</button>
+          <span class="fld-h" style="display:inline-block;margin-left:10px">Cue plays A2 (Breathe / limit orders) for custom audio, or "Is this trade in your plan?" for TTS. Ping plays the A2 chime.</span>
         </div>
       </div>
 
@@ -572,13 +578,26 @@ const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
 const STALE_MS         = 6000;            // BPM grey-out after no update
 const LS_KEY           = 'cadence';
 
-/* Acute tier table — each tier fires once per excursion, cooldown enforced */
+/* Acute tier table — recalibrated v0.3 for desk-work resting baselines (not athletic).
+   Each tier fires once per excursion; cooldown enforced; interrupts lower-tier cues. */
 const ACUTE_TIERS = [
-  { id:'A1', level:1, bpm:110, hold:60, msg:'Is this trade in your plan?',                      kind:'acute' },
-  { id:'A2', level:2, bpm:125, hold:30, msg:'Limit orders only. No market orders.',             kind:'acute' },
-  { id:'A3', level:3, bpm:140, hold:20, msg:'Hands off keyboard. Five minutes.',                kind:'acute' },
-  { id:'A4', level:4, bpm:155, hold:0,  msg:'Close positions via limit. No new trades today.',  kind:'acute' }
+  { id:'A1', level:1, bpm:95,  hold:45, msg:'Is this trade in your plan?',            kind:'acute' },
+  { id:'A2', level:2, bpm:105, hold:20, msg:'Breathe. Stick to your limit orders.',   kind:'acute' },
+  { id:'A3', level:3, bpm:115, hold:10, msg:'Get off the computer.',                  kind:'acute' },
+  { id:'A4', level:4, bpm:120, hold:0,  msg:'Stop trading. Close positions via limit.', kind:'acute' }
 ];
+
+/* Map tier/event IDs to custom audio files (user-recorded). Missing keys fall back to TTS. */
+const AUDIO_ASSETS = {
+  'A2':  'audio/a2-breathe-limit-orders.m4a',
+  'A3':  'audio/a3-get-off-computer.m4a',
+  'A4':  'audio/a4-stop-trading.m4a',
+  'REC': 'audio/recovery-great-recovery.m4a'
+};
+
+/* Entry-ping pitches (Hz) per tier level — ascending C major triad + octave */
+const ENTRY_PING_HZ = [0, 523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+const ENTRY_PING_DEBOUNCE_MS = 30000;
 
 /* Chronic tier table — cumulative seconds at or above chronic threshold */
 const CHRONIC_TIERS = [
@@ -592,14 +611,15 @@ const CHRONIC_TIERS = [
 const DEESCALATE_MS       = 30000; // once below tier threshold for this, tier can re-arm
 const RECOVERY_BELOW_MS   = 30000; // below baseline this long → recovery cue
 const RECOVERY_COOLDOWN_MS= 5 * 60 * 1000;
-const EXCURSION_BPM       = 110;   // above this marks an "excursion" for recovery tracking
+const EXCURSION_BPM       = 95;    // above this marks an "excursion" for recovery tracking (aligned with A1 floor)
 
 /* ── Default settings ── */
 const DEFAULTS = {
   voiceEnabled: true,
-  voiceEngine: 'web',       // 'web' | 'eleven'
+  voiceEngine: 'audio',     // 'web' | 'audio' | 'eleven'   — 'audio' = user's recorded files
   voiceRate: 0.95,
   voiceVol: 0.9,
+  entryPingEnabled: true,
   baselineBpm: 85,
   chronicBpm: 95,
   cooldownSec: 90,
@@ -693,10 +713,10 @@ function fmtTimeHM(d){
 }
 function tierOfBpm(bpm){
   if(bpm == null) return 0;
-  if(bpm >= 155) return 4;
-  if(bpm >= 140) return 3;
-  if(bpm >= 125) return 2;
-  if(bpm >= 110) return 1;
+  if(bpm >= 120) return 4;
+  if(bpm >= 115) return 3;
+  if(bpm >= 105) return 2;
+  if(bpm >= 95)  return 1;
   return 0;
 }
 
@@ -730,6 +750,93 @@ function speak(msg, opts){
 }
 
 /* ═══════════════════════════════════════════════════════════
+   AUDIO CONTEXT (for entry pings + custom audio files)
+═══════════════════════════════════════════════════════════ */
+let audioCtx = null;
+let currentAudioEl = null;
+const lastPingAt = { 1:0, 2:0, 3:0, 4:0 };
+let lastSeenTier = 0;
+
+function ensureAudioCtx(){
+  try{
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    if(audioCtx && audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }catch(e){}
+  return audioCtx;
+}
+
+function playEntryPing(level){
+  if(!S.settings.entryPingEnabled) return;
+  if(!S.settings.voiceEnabled) return;
+  if(level < 1 || level > 4) return;
+  const ctx = ensureAudioCtx();
+  if(!ctx) return;
+  try{
+    const now = ctx.currentTime;
+    const freq = ENTRY_PING_HZ[level];
+    const vol  = Math.max(0.01, S.settings.voiceVol * 0.35);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(vol, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.25);
+  }catch(e){ console.warn('entry ping failed', e); }
+}
+
+function stopAllVoice(){
+  if(currentAudioEl){
+    try{ currentAudioEl.pause(); currentAudioEl.currentTime = 0; }catch(e){}
+    currentAudioEl = null;
+  }
+  try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+}
+
+function playAudioFile(path, opts){
+  opts = opts || {};
+  if(opts.interrupt) stopAllVoice();
+  const a = new Audio(path);
+  a.volume = opts.volume != null ? opts.volume : S.settings.voiceVol;
+  a.onended = () => { if(currentAudioEl === a) currentAudioEl = null; };
+  a.onerror = () => {
+    console.warn('[Cadence] audio file failed, falling back to TTS:', path);
+    if(currentAudioEl === a) currentAudioEl = null;
+    // Fall back to TTS with the message
+    if(opts._fallbackMsg) speak(opts._fallbackMsg, opts);
+  };
+  currentAudioEl = a;
+  const p = a.play();
+  if(p && typeof p.catch === 'function'){
+    p.catch(err => {
+      console.warn('[Cadence] audio play rejected:', err);
+      if(currentAudioEl === a) currentAudioEl = null;
+      if(opts._fallbackMsg) speak(opts._fallbackMsg, opts);
+    });
+  }
+}
+
+/* Unified cue dispatcher — routes to audio file or TTS based on engine + availability */
+function playCue(id, msg, opts){
+  if(!S.settings.voiceEnabled) return;
+  opts = opts || {};
+  const audioPath = AUDIO_ASSETS[id];
+  if(S.settings.voiceEngine === 'audio' && audioPath){
+    playAudioFile(audioPath, Object.assign({ _fallbackMsg: msg }, opts));
+  } else {
+    if(opts.interrupt && currentAudioEl){ try{ currentAudioEl.pause(); }catch(e){} currentAudioEl = null; }
+    speak(msg, opts);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    LOG + ALERT DISPATCH
 ═══════════════════════════════════════════════════════════ */
 function fireTierCue(tier, interrupt){
@@ -744,7 +851,7 @@ function fireTierCue(tier, interrupt){
   };
   S.log.push(entry);
   renderLog();
-  speak(tier.msg, { interrupt: !!interrupt });
+  playCue(tier.id, tier.msg, { interrupt: !!interrupt });
 }
 
 function fireRecovery(){
@@ -758,8 +865,8 @@ function fireRecovery(){
   };
   S.log.push(entry);
   renderLog();
-  // Quieter and slightly lower pitch for positive cue
-  speak('Nice recovery.', { volume: Math.min(0.7, S.settings.voiceVol), pitch: 0.95 });
+  // Quieter for positive cue. Cue dispatcher plays REC audio file if engine=audio; else TTS.
+  playCue('REC', 'Nice recovery.', { volume: Math.min(0.75, S.settings.voiceVol), pitch: 0.95 });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -864,6 +971,7 @@ function onBpm(bpm, ts){
     S.sessionStart = now;
     S.lastTickTs = null;
     initTierState();
+    lastSeenTier = 0;
   }
 
   bpm = Math.max(0, Math.min(250, bpm|0));
@@ -883,6 +991,22 @@ function onBpm(bpm, ts){
   while(S.samples.length > MAX_SAMPLES) S.samples.shift();
   const cutoff = now - SAMPLE_WINDOW_MS;
   while(S.samples.length && S.samples[0].t < cutoff) S.samples.shift();
+
+  // Entry ping — fires on ASCENT into a higher tier band, with per-tier debounce.
+  // This is independent of acute sustain firing; it just lets you know you've crossed.
+  const curTier = tierOfBpm(bpm);
+  if(curTier > lastSeenTier && curTier > 0){
+    const lastPing = lastPingAt[curTier] || 0;
+    if(now - lastPing >= ENTRY_PING_DEBOUNCE_MS){
+      // Skip the ping for A4 (hold=0) — the sustain cue fires instantly at same moment, no need for both
+      const tierDef = ACUTE_TIERS[curTier - 1];
+      if(!tierDef || tierDef.hold > 0){
+        playEntryPing(curTier);
+        lastPingAt[curTier] = now;
+      }
+    }
+  }
+  lastSeenTier = curTier;
 
   // Tier engines
   tickAcute(bpm, now);
@@ -1266,7 +1390,7 @@ function renderChart(){
 
   // Tier threshold lines
   const tierColors = ['#d9a85c','#e68a46','#df5f56','#c12f4a'];
-  [110,125,140,155].forEach((v,i) => {
+  [95,105,115,120].forEach((v,i) => {
     const y = yAt(v);
     ctx.strokeStyle = tierColors[i] + '66';
     ctx.setLineDash([4,4]);
@@ -1547,6 +1671,7 @@ function openSettings(){
   $('setChronic').value  = S.settings.chronicBpm;
   $('setCooldown').value = S.settings.cooldownSec; $('setCdVal').textContent = S.settings.cooldownSec;
   $('setDemoMode').checked = S.settings.demoMode;
+  $('setEntryPing').checked = S.settings.entryPingEnabled;
   document.querySelectorAll('[data-engine]').forEach(b => b.classList.toggle('on', b.dataset.engine === S.settings.voiceEngine));
   // HR source
   document.querySelectorAll('[data-src]').forEach(b => b.classList.toggle('on', b.dataset.src === S.settings.hrSource));
@@ -1564,6 +1689,7 @@ function saveSettingsFromUI(){
   S.settings.chronicBpm   = parseInt($('setChronic').value, 10)  || DEFAULTS.chronicBpm;
   S.settings.cooldownSec  = parseInt($('setCooldown').value, 10) || DEFAULTS.cooldownSec;
   S.settings.demoMode     = $('setDemoMode').checked;
+  S.settings.entryPingEnabled = $('setEntryPing').checked;
   S.settings.pulsoidToken = ($('setPulsoidToken').value || '').trim();
   // hrSource is set live when user taps the segmented buttons; persist whatever it is now
   saveSettings();
@@ -1607,7 +1733,8 @@ function wire(){
   $('setClose').onclick    = closeSettings;
   $('setSave').onclick     = saveSettingsFromUI;
   $('setReset').onclick    = resetSettingsToDefaults;
-  $('setVoiceTest').onclick= () => speak('Is this trade in your plan?', { interrupt:true });
+  $('setVoiceTest').onclick= () => { ensureAudioCtx(); playCue('A2', 'Is this trade in your plan?', { interrupt:true }); };
+  $('setPingTest').onclick = () => { ensureAudioCtx(); playEntryPing(2); };
 
   $('setRate').oninput = e => $('setRateVal').textContent = parseFloat(e.target.value).toFixed(2);
   $('setVol').oninput  = e => $('setVolVal').textContent  = parseFloat(e.target.value).toFixed(2);
