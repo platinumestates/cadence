@@ -177,6 +177,9 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 .aslot-btn{background:var(--bg3);border:1px solid var(--bd2);color:var(--tx2);padding:3px 8px;font-size:10.5px;border-radius:5px;cursor:pointer;font-family:var(--f-body);white-space:nowrap}
 .aslot-btn:hover{color:var(--tx);border-color:var(--bd3)}
 .aslot-btn.danger:hover{color:var(--t4);border-color:var(--t4)}
+.aslot-flash{animation:aslotFlash 1.2s ease-out}
+@keyframes aslotFlash{0%{background:var(--t0-bg);border-color:var(--t0)}100%{background:var(--bg2);border-color:var(--bd)}}
+.aslot-src.aslot-playing{color:var(--t0)!important;font-weight:600;letter-spacing:.5px}
 .tier-row.fired{opacity:1}
 .tier-row.armed .t-chip{box-shadow:0 0 0 2px var(--bg2),0 0 0 3px currentColor,0 0 12px currentColor}
 .tier-row.latched{background:linear-gradient(90deg,transparent,currentColor 50%,transparent);background-size:300% 100%;animation:latchSweep 2.5s ease-out 1}
@@ -379,8 +382,8 @@ body.widget .widget-only{display:flex!important}
       <div class="ct">Scrolling 2-minute window<em id="chartRange">0 samples</em></div>
       <div class="ct-right">
         <span><span class="legend-d" style="background:var(--t0)"></span>BPM</span>
-        <span><span class="legend-d" style="background:var(--t1);opacity:.6"></span>A1 95</span>
-        <span><span class="legend-d" style="background:var(--t2);opacity:.6"></span>A2 105</span>
+        <span><span class="legend-d" style="background:var(--t1);opacity:.6"></span>A1 100</span>
+        <span><span class="legend-d" style="background:var(--t2);opacity:.6"></span>A2 108</span>
         <span><span class="legend-d" style="background:var(--t3);opacity:.6"></span>A3 115</span>
         <span><span class="legend-d" style="background:var(--t4);opacity:.6"></span>A4 120</span>
       </div>
@@ -612,14 +615,14 @@ const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
 const STALE_MS         = 6000;            // BPM grey-out after no update
 const LS_KEY           = 'cadence';
 
-/* Acute tier table — recalibrated v0.3 for desk-work resting baselines (not athletic).
-   Each tier fires once per excursion; cooldown enforced; interrupts lower-tier cues.
-   v0.4: A3 = "Stop trading" (close positions, stay at keyboard), A4 = "Get off the computer" (physical escalation). */
+/* Acute tier table — v0.5: A1 redesigned as immediate 100bpm alert with 5-min cooldown.
+   A2-A4 unchanged in behavior, shifted spacing. Each tier fires once per excursion;
+   per-tier cooldown overrides default; higher tiers interrupt lower. */
 const ACUTE_TIERS = [
-  { id:'A1', level:1, bpm:95,  hold:45, msg:'Is this trade in your plan?',                kind:'acute' },
-  { id:'A2', level:2, bpm:105, hold:20, msg:'Breathe. Stick to your limit orders.',       kind:'acute' },
-  { id:'A3', level:3, bpm:115, hold:10, msg:'Stop trading. Close positions via limit.',   kind:'acute' },
-  { id:'A4', level:4, bpm:120, hold:0,  msg:'Get off the computer. Session over.',        kind:'acute' }
+  { id:'A1', level:1, bpm:100, hold:0,  cooldown:300, msg:"Elevated heart rate. If you're in a market order, close it. Zoom out your timeframes. Limit orders only.", kind:'acute' },
+  { id:'A2', level:2, bpm:108, hold:20,               msg:'Breathe. Stick to your limit orders.',                kind:'acute' },
+  { id:'A3', level:3, bpm:115, hold:10,               msg:'Stop trading. Close positions via limit.',            kind:'acute' },
+  { id:'A4', level:4, bpm:120, hold:0,                msg:'Get off the computer. Session over.',                 kind:'acute' }
 ];
 
 /* Bundled audio files (served from the repo — available on every device). Missing keys fall back to TTS. */
@@ -766,8 +769,8 @@ function tierOfBpm(bpm){
   if(bpm == null) return 0;
   if(bpm >= 120) return 4;
   if(bpm >= 115) return 3;
-  if(bpm >= 105) return 2;
-  if(bpm >= 95)  return 1;
+  if(bpm >= 108) return 2;
+  if(bpm >= 100) return 1;
   return 0;
 }
 
@@ -874,11 +877,21 @@ function playAudioFile(path, opts){
   }
 }
 
-/* Resolve audio source for a slot: custom upload → bundled asset → null (TTS fallback). */
+/* Resolve audio source for a slot: custom upload → bundled asset → null (TTS fallback).
+   Custom may be legacy string (data URL) or {data, name, size, type, uploadedAt} object. */
 function resolveAudioSrc(id){
   const custom = S.settings.customAudio && S.settings.customAudio[id];
-  if(custom) return custom;
+  if(custom){
+    if(typeof custom === 'string') return custom;      // legacy v0.4 shape
+    if(custom && custom.data) return custom.data;      // v0.5+ object shape
+  }
   return AUDIO_ASSETS[id] || null;
+}
+
+/* Is a slot being served from user-uploaded custom audio right now? */
+function slotIsCustom(id){
+  const c = S.settings.customAudio && S.settings.customAudio[id];
+  return !!c;
 }
 
 /* Unified cue dispatcher — routes to audio file or TTS based on engine + availability */
@@ -952,7 +965,8 @@ function tickAcute(bpm, now){
       if(s.enteredAt === null) s.enteredAt = now;
       s.belowSince = null;
       const heldMs = now - s.enteredAt;
-      const cdMs = S.settings.cooldownSec * 1000;
+      // Tier-specific cooldown overrides the default (e.g. A1 enforces 5-min re-fire gap)
+      const cdMs = (t.cooldown || S.settings.cooldownSec) * 1000;
       if(!s.fired && heldMs >= t.hold * 1000){
         if(s.firedAt === null || (now - s.firedAt) >= cdMs){
           s.fired = true;
@@ -1450,7 +1464,7 @@ function renderChart(){
 
   // Tier threshold lines
   const tierColors = ['#d9a85c','#e68a46','#df5f56','#c12f4a'];
-  [95,105,115,120].forEach((v,i) => {
+  [100,108,115,120].forEach((v,i) => {
     const y = yAt(v);
     ctx.strokeStyle = tierColors[i] + '66';
     ctx.setLineDash([4,4]);
@@ -1522,7 +1536,7 @@ function renderTierLadders(){
       <div class="tier-row ${s.fired?'fired':''} ${armed?'armed':''}" style="color:var(--t${t.level})">
         <div class="${klass}"><span>${t.id}</span></div>
         <div class="t-body">
-          <div class="t-cond">&gt; ${t.bpm} bpm · ${t.hold>0?'sustained '+t.hold+'s':'any duration'}</div>
+          <div class="t-cond">&gt; ${t.bpm} bpm · ${t.hold>0?'sustained '+t.hold+'s':'any duration'}${t.cooldown?' · '+(t.cooldown/60)+'-min cooldown':''}</div>
           <div class="t-msg">${t.msg}</div>
         </div>
         <div class="t-meter">
@@ -1774,20 +1788,33 @@ function openSettings(){
 function renderAudioSlots(){
   const el = $('audioSlots'); if(!el) return;
   const rows = CUE_SLOTS.map(slot => {
-    const hasCustom = !!(S.settings.customAudio && S.settings.customAudio[slot.id]);
+    const custom = S.settings.customAudio && S.settings.customAudio[slot.id];
     const hasBundled = !!AUDIO_ASSETS[slot.id];
     let srcTxt = '', srcClass = '';
-    if(hasCustom){ srcTxt = 'Custom upload'; srcClass = 'custom'; }
-    else if(hasBundled){ srcTxt = 'Default bundled'; srcClass = 'default'; }
-    else { srcTxt = 'TTS fallback (no audio)'; srcClass = 'tts'; }
+    if(custom){
+      srcClass = 'custom';
+      if(typeof custom === 'string'){
+        srcTxt = '✓ Custom upload (legacy)';
+      } else {
+        const kb = Math.round(custom.size/1024);
+        const name = (custom.name || 'uploaded').replace(/</g,'&lt;');
+        srcTxt = '✓ Custom · ' + name + ' · ' + kb + ' KB';
+      }
+    } else if(hasBundled){
+      srcTxt = 'Default bundled';
+      srcClass = 'default';
+    } else {
+      srcTxt = 'TTS fallback (no audio)';
+      srcClass = 'tts';
+    }
     return `
-      <div class="aslot">
+      <div class="aslot" data-slot-row="${slot.id}">
         <div class="aslot-lbl">${slot.id}<em>${slot.kind}</em></div>
         <div class="aslot-src ${srcClass}">${srcTxt}</div>
         <div class="aslot-btns">
           <button class="aslot-btn" data-slot-test="${slot.id}">▶ Test</button>
-          <button class="aslot-btn" data-slot-upload="${slot.id}">Upload…</button>
-          ${hasCustom ? `<button class="aslot-btn danger" data-slot-clear="${slot.id}">Clear</button>` : ''}
+          <button class="aslot-btn" data-slot-upload="${slot.id}">${custom?'Replace…':'Upload…'}</button>
+          ${custom ? `<button class="aslot-btn danger" data-slot-clear="${slot.id}">Clear</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -1795,7 +1822,28 @@ function renderAudioSlots(){
 
   // wire
   document.querySelectorAll('[data-slot-test]').forEach(b => {
-    b.onclick = () => { ensureAudioCtx(); testFireCue(b.dataset.slotTest); };
+    b.onclick = () => {
+      ensureAudioCtx();
+      const id = b.dataset.slotTest;
+      // Flash the source label to show which one played
+      const row = document.querySelector('[data-slot-row="'+id+'"]');
+      const srcEl = row && row.querySelector('.aslot-src');
+      if(srcEl){
+        const wasCustom = slotIsCustom(id);
+        const hasBundled = !!AUDIO_ASSETS[id];
+        const flashTxt = wasCustom ? '▶ PLAYING CUSTOM'
+                       : hasBundled ? '▶ PLAYING BUNDLED'
+                       : '▶ PLAYING TTS';
+        const prevTxt = srcEl.innerHTML;
+        srcEl.innerHTML = flashTxt;
+        srcEl.classList.add('aslot-playing');
+        setTimeout(() => {
+          srcEl.innerHTML = prevTxt;
+          srcEl.classList.remove('aslot-playing');
+        }, 1800);
+      }
+      testFireCue(id);
+    };
   });
   document.querySelectorAll('[data-slot-upload]').forEach(b => {
     b.onclick = () => uploadAudioForSlot(b.dataset.slotUpload);
@@ -1819,16 +1867,29 @@ function uploadAudioForSlot(slotId){
     const reader = new FileReader();
     reader.onload = () => {
       if(!S.settings.customAudio) S.settings.customAudio = {};
-      S.settings.customAudio[slotId] = reader.result; // data URL
+      S.settings.customAudio[slotId] = {
+        data: reader.result,      // data URL
+        name: f.name,
+        size: f.size,
+        type: f.type || 'audio/unknown',
+        uploadedAt: Date.now()
+      };
       try{
         saveSettings();
       }catch(err){
-        // localStorage quota — roll back
         delete S.settings.customAudio[slotId];
         alert('Could not save — browser storage full. Clear a slot or use smaller files.');
         return;
       }
       renderAudioSlots();
+      // Flash confirmation on the updated row
+      setTimeout(() => {
+        const row = document.querySelector('[data-slot-row="'+slotId+'"]');
+        if(row){
+          row.classList.add('aslot-flash');
+          setTimeout(() => row.classList.remove('aslot-flash'), 1200);
+        }
+      }, 20);
     };
     reader.onerror = () => alert('Could not read file.');
     reader.readAsDataURL(f);
