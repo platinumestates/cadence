@@ -1,4 +1,4 @@
-/* Cadence Control · Platform Content Script · v0.5.0
+/* Cadence Control · Platform Content Script · v0.5.1
  *
  * Runs on TopstepX, WealthCharts, ProjectX. Two responsibilities:
  *
@@ -342,30 +342,87 @@
     return m ? m[1] : s;
   }
 
-  /** Detect selected account from Account dropdown.
-   *  Returns { label, isPractice } or null. */
+  /** Detect selected account from the top-bar account selector.
+   *  Returns { label, isPractice } or null.
+   *
+   *  v0.5.1 fixes:
+   *    - "LIVE" keyword added (was only TRADING/PRACTICE/PAPER)
+   *    - Dropdown-list options filtered out (role=listbox / role=option ancestors)
+   *    - "(Ineligible)" entries skipped
+   *    - Top-bar geometry filter (top < 120px) to distinguish selected from options
+   *    - No longer requires whitespace between dollar and keyword
+   *      ("$100K Live|TOPX5394" has no space — the button concatenates inner spans)
+   */
   function detectSelectedAccount() {
     if (PLATFORM !== 'topstepx') return null;
-    // Account selector shows "$100K TRADING ..." or "$150K PRACTICE ..."
-    const candidates = document.querySelectorAll(
-      '[class*="account" i] [role="button"], [class*="account" i] select, ' +
-      '[data-testid*="account" i], [class*="account-select" i], [class*="account-dropdown" i]'
+
+    const ACCOUNT_KW = /(LIVE|PRACTICE|PAPER|TRADING|COMBINE|FUNDED|XFA|EXPRESS|EVALUATION|SIM)/i;
+    const PRACTICE_KW = /(PRACTICE|PAPER|SIM|DEMO)/i;
+    const INELIGIBLE_KW = /ineligible/i;
+
+    // True if el or any ancestor is inside an open dropdown/menu/listbox subtree.
+    function isInDropdownList(el) {
+      let cur = el;
+      while (cur && cur !== document.body) {
+        const role = cur.getAttribute && cur.getAttribute('role');
+        const cls = (cur.className && typeof cur.className === 'string')
+          ? cur.className.toLowerCase() : '';
+        if (role === 'menu' || role === 'listbox' || role === 'option') return true;
+        if (/menu|listbox|popper|dropdown-content|dropdown-menu|mui-popover|mui-menu/.test(cls)) return true;
+        cur = cur.parentElement;
+      }
+      return false;
+    }
+
+    function extractFromText(text) {
+      if (!text) return null;
+      const trimmed = text.trim();
+      if (trimmed.length < 6 || trimmed.length > 80) return null;
+      if (INELIGIBLE_KW.test(trimmed)) return null;
+      if (!/\$\d[\d,]*K?/i.test(trimmed)) return null;
+      if (!ACCOUNT_KW.test(trimmed)) return null;
+      const isPractice = PRACTICE_KW.test(trimmed);
+      return {
+        label: trimmed.replace(/\s+/g, ' ').slice(0, 80),
+        isPractice
+      };
+    }
+
+    // Priority 1: explicit account-selector testid / aria-label in top bar
+    const explicit = document.querySelectorAll(
+      '[data-testid*="account-select" i], [data-testid*="account-dropdown" i], ' +
+      '[aria-label*="account" i][role="button"], [aria-label*="select account" i]'
     );
-    for (const el of candidates) {
-      const text = (el.textContent || el.value || '').trim();
-      if (/\$([\d,]+K?)\s+(TRADING|PRACTICE|PAPER)/i.test(text)) {
-        const isPractice = /PRACTICE|PAPER/i.test(text);
-        return { label: text.replace(/\s+/g, ' ').slice(0, 60), isPractice };
+    for (const el of explicit) {
+      if (isInDropdownList(el)) continue;
+      const r = extractFromText(el.textContent || '');
+      if (r) return r;
+    }
+
+    // Priority 2: top-bar buttons containing an account label.
+    // Topstep top bar is within first ~120px from top of viewport.
+    const buttons = document.querySelectorAll('button, [role="button"]');
+    let best = null;
+    for (const el of buttons) {
+      if (isInDropdownList(el)) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.top > 120) continue;
+      if (rect.width < 80 || rect.height < 18) continue;
+      const r = extractFromText(el.textContent || '');
+      if (r) {
+        if (!best || /LIVE|FUNDED/i.test(r.label)) best = r;
       }
     }
-    // Broader scan: any visible text matching the pattern
-    const allEls = document.querySelectorAll('span, div, option');
+    if (best) return best;
+
+    // Priority 3: last-resort broad top-bar scan
+    const allEls = document.querySelectorAll('span, div, option, button');
     for (const el of allEls) {
-      const t = (el.textContent || '').trim();
-      if (/\$\d[\d,]*K?\s+(TRADING|PRACTICE|PAPER)/i.test(t) && t.length < 80) {
-        const isPractice = /PRACTICE|PAPER/i.test(t);
-        return { label: t.replace(/\s+/g, ' ').slice(0, 60), isPractice };
-      }
+      if (isInDropdownList(el)) continue;
+      const rect = el.getBoundingClientRect && el.getBoundingClientRect();
+      if (rect && rect.top > 120) continue;
+      const r = extractFromText(el.textContent || '');
+      if (r) return r;
     }
     return null;
   }
