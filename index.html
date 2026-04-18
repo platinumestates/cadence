@@ -503,7 +503,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.1 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.12.2 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -1058,6 +1058,7 @@ const S = {
   connected: false,
   connecting: false,
   sourceKind: null,         // 'bluetooth' | 'pulsoid' | 'demo' once connected
+  lastKnownSource: null,    // v0.11.11: preserved across disconnect so endSession() gets accurate metadata
   pulsoidSocket: null,
   pulsoidRetryTimer: null,
 
@@ -1629,6 +1630,7 @@ async function connectBluetooth(){
     S.connected = true;
     S.connecting = false;
     S.sourceKind = 'bluetooth';
+    S.lastKnownSource = 'bluetooth';
     setConnStatus('conn', device.name || 'Polar HR sensor');
     $('btnConnect').style.display = 'none';
     $('btnDisconnect').style.display = '';
@@ -1743,6 +1745,7 @@ async function connectPulsoid(){
       S.connected = true;
       S.connecting = false;
       S.sourceKind = 'pulsoid';
+      S.lastKnownSource = 'pulsoid';
       setConnStatus('conn', 'Pulsoid stream');
       $('btnConnect').style.display = 'none';
       $('btnDisconnect').style.display = '';
@@ -1841,6 +1844,8 @@ let demoCur = 72;
 function startDemo(){
   stopDemo();
   S.connected = true;
+  S.sourceKind = 'demo';        // v0.11.11: wire demo source so endSession + morning filters see it
+  S.lastKnownSource = 'demo';
   setConnStatus('conn', 'Demo simulator');
   $('btnConnect').style.display = 'none';
   $('btnDisconnect').style.display = '';
@@ -2669,7 +2674,7 @@ function endSession(){
     endMs: endedAt,
     durMs: durMs,
     dateKey: dateKey,
-    source: S.sourceKind || 'unknown',
+    source: S.sourceKind || S.lastKnownSource || 'unknown',
     preCheckin: S.preCheckin,            // may be null if user skipped
     postCheckin: null,                   // filled in when savePostCheckin() runs
     buckets: S.sessionBuckets.slice(),   // shallow copy
