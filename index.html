@@ -10,6 +10,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- ═══ Firebase SDK (v0.9.4 · Phase 1a) ═══
+     Shares peptide-tracker-84cf5 with TradeLog Pro.
+     Cadence writes to a dedicated collection: cadence_sessions.
+     Web API keys are designed to be public; Firestore security rules control access. -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyAzgGUbVcJV7R7O_r_l8CguM8SNPZ3pNAQ",
+  authDomain: "peptide-tracker-84cf5.firebaseapp.com",
+  projectId: "peptide-tracker-84cf5",
+  storageBucket: "peptide-tracker-84cf5.firebasestorage.app",
+  messagingSenderId: "647301235118",
+  appId: "1:647301235118:web:bc1204a82f1bdb1697083f"
+};
+try {
+  firebase.initializeApp(firebase.apps.length ? undefined : firebaseConfig);
+  window._cadenceDb = firebase.firestore();
+} catch(e){
+  console.warn('[Cadence] Firebase init deferred:', e && e.message);
+  window._cadenceDb = null;
+}
+</script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -86,18 +111,22 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 
 /* ── BUTTONS ── */
 .btn{border:1px solid var(--bd2);background:var(--bg3);color:var(--tx2);border-radius:8px;padding:6px 13px;font-size:12px;font-family:var(--f-body);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500;letter-spacing:.1px}
-.btn:hover{color:var(--tx);border-color:var(--bd3);background:var(--bg4)}
+.btn:hover:not(:disabled){color:var(--tx);border-color:var(--bd3);background:var(--bg4)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 .btn-primary{background:var(--t0);color:#0a0b0e;border-color:var(--t0);font-weight:600}
-.btn-primary:hover{background:#8eb8a2;border-color:#8eb8a2;color:#0a0b0e}
+.btn-primary:hover:not(:disabled){background:#8eb8a2;border-color:#8eb8a2;color:#0a0b0e}
 .btn-ghost{background:transparent}
-.btn-ghost:hover{background:var(--bg3)}
+.btn-ghost:hover:not(:disabled){background:var(--bg3)}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-lg{padding:9px 18px;font-size:13px}
 .btn-warn{border-color:rgba(232,185,94,.35);color:var(--warn)}
-.btn-warn:hover{background:rgba(232,185,94,.1)}
+.btn-warn:hover:not(:disabled){background:rgba(232,185,94,.1)}
 .btn-danger{border-color:rgba(255,51,71,.5);color:var(--t4)}
-.btn-danger:hover{background:var(--t4-bg)}
+.btn-danger:hover:not(:disabled){background:var(--t4-bg)}
 .btn-icon{padding:6px 9px;display:inline-flex;align-items:center;justify-content:center;min-width:32px}
+/* v0.9.4: Session in-progress variant — amber indicates an active recorded session. */
+.btn.session-active{background:rgba(232,185,94,.15);border-color:var(--warn);color:var(--warn);font-weight:600}
+.btn.session-active:hover:not(:disabled){background:rgba(232,185,94,.22)}
 .btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
 
 .seg{display:flex;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:2px;gap:2px}
@@ -354,7 +383,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.9.3 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.9.4 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -368,6 +397,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
         <button class="seg-b" data-view="widget" title="Open a detached widget window you can drag and pin on top">Pop Out</button>
       </div>
       <button class="btn btn-ghost btn-icon" id="btnSettings" title="Settings">⚙</button>
+      <button class="btn" id="btnStartSession" disabled title="Connect a sensor first">Start Session</button>
       <button class="btn btn-primary" id="btnConnect">Connect sensor</button>
       <button class="btn" id="btnDisconnect" style="display:none">Disconnect</button>
     </div>
@@ -656,13 +686,13 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.9.3 — HRM Trading Companion
+   CADENCE v0.9.4 — HRM Trading Companion
    v0.9:   detached popout widget via window.open + BroadcastChannel
    v0.9.1: stacked layout, heartbeat pulse on elevated
    v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220
-   v0.9.3: BPM right-aligned, badge dot via ::before (fixes first-letter obscured),
-           baseline teal color, pulse starts at tier 1 (≥95), sparkline stretches
-           to full width when session shorter than 2-min window
+   v0.9.3: right-aligned BPM, ::before badge dot, baseline teal, tier-1 pulse, dynamic sparkline
+   v0.9.4: Phase 1a — Firebase SDK wiring + Start/End Session button foundation
+           (peptide-tracker-84cf5 shared with TradeLog, collection: cadence_sessions)
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Constants ── */
@@ -793,6 +823,15 @@ const S = {
   lastBpmTs: null,
   currentBpm: null,
   currentTier: 0,        // 0..4 highest fired (acute)
+
+  // v0.9.4 · Phase 1a: Intentional trading session tracking.
+  // Separate from sessionStart (which marks "first BPM seen" and drives the header clock).
+  // sessionId is set when user clicks "Start Session" — marks the record that will be
+  // written to Firestore cadence_sessions/sess_<startMs> on end.
+  sessionId: null,       // 'sess_<unixMs>' or null when no recorded session active
+  sessionStartMs: null,  // unix ms start of recorded session
+  preCheckin: null,      // {sleep, mood, hydrated, ate, note, savedAt}  (populated in Phase 1b)
+  tierEvents: [],        // {tier, level, enter, exit, peakBpm, durMs, fired}  (populated in Phase 1b)
 
   // Tier state per-tier
   acuteState: {},        // { A1: { enteredAt, fired, firedAt, belowSince } }
@@ -1280,6 +1319,7 @@ async function connectBluetooth(){
     $('btnDisconnect').style.display = '';
     $('btnExportCsv').disabled = false;
     $('sessStat').style.display = '';
+    updateSessionButton();
     clearBanner();
     setBanner('ok', 'Sensor connected',
       'Fold Cadence into a corner of your trading monitor. Right-click this tab → <strong>Pin tab</strong> so Chrome never discards the connection.');
@@ -1312,6 +1352,9 @@ function onGattDisconnect(){
   setConnStatus('err', 'Sensor disconnected — re-press the device button');
   $('btnConnect').style.display = '';
   $('btnDisconnect').style.display = 'none';
+  // v0.9.4: end any active recorded session so button doesn't strand in amber state
+  if(S.sessionId) endSession();
+  updateSessionButton();
   setBanner('warn', 'Sensor disconnected',
     'Verity Sense sleeps after ~1 minute idle. Re-press its button until you see the <strong>solid blue LED</strong>, then click <strong>Connect sensor</strong> again.');
 }
@@ -1333,6 +1376,9 @@ async function disconnectSensor(){
   setConnStatus('idle', 'Not connected');
   $('btnConnect').style.display = '';
   $('btnDisconnect').style.display = 'none';
+  // v0.9.4: end any active recorded session
+  if(S.sessionId) endSession();
+  updateSessionButton();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1391,6 +1437,7 @@ async function connectPulsoid(){
       $('btnDisconnect').style.display = '';
       $('btnExportCsv').disabled = false;
       $('sessStat').style.display = '';
+      updateSessionButton();
       clearBanner();
       setBanner('ok', 'Pulsoid stream connected',
         'Cadence is reading the live feed from your Pulsoid session. Pulsoid is still holding the sensor — keep its window open. If Pulsoid loses its sensor, this stream will stall too.');
@@ -1422,6 +1469,9 @@ async function connectPulsoid(){
         setConnStatus('err', 'Pulsoid stream closed');
         $('btnConnect').style.display = '';
         $('btnDisconnect').style.display = 'none';
+        // v0.9.4: end any active recorded session
+        if(S.sessionId) endSession();
+        updateSessionButton();
         setBanner('warn', 'Pulsoid stream disconnected',
           'Socket closed (code ' + ev.code + '). Check Pulsoid is still receiving from the sensor, then click <strong>Connect sensor</strong> to reopen the stream.');
       }
@@ -1488,6 +1538,7 @@ function startDemo(){
   $('btnExportCsv').disabled = false;
   $('sessStat').style.display = '';
   $('demoPane').style.display = '';
+  updateSessionButton();
   demoCur = 72; demoTarget = 72;
   S.demoProfile = 'calm';
   S.demoTimer = setInterval(demoTick, 1000);
@@ -1908,9 +1959,66 @@ function clearSession(){
   S.lastBpmTs = null;
   S.currentBpm = null;
   S.currentTier = 0;
+  // v0.9.4: also clear any in-progress recorded session metadata
+  S.sessionId = null;
+  S.sessionStartMs = null;
+  S.preCheckin = null;
+  S.tierEvents = [];
   initTierState();
+  updateSessionButton();
   renderAll();
   renderLog();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SESSION RECORDING (v0.9.4 · Phase 1a — foundation only)
+   Phase 1a: button + sessionId creation, no Firestore write yet.
+   Phase 1b: pre-session check-in modal + 10s bucket recorder.
+   Phase 1c: post-session tag modal + Firestore write + 10-day prune.
+═══════════════════════════════════════════════════════════ */
+function startSession(){
+  if(!S.connected) return;          // guard: button should already be disabled
+  if(S.sessionId) return;           // already in a recorded session
+  const startMs = Date.now();
+  S.sessionId = 'sess_' + startMs;
+  S.sessionStartMs = startMs;
+  S.preCheckin = null;              // Phase 1b populates this
+  S.tierEvents = [];                // Phase 1b populates this
+  console.log('[Cadence] Session started:', S.sessionId);
+  updateSessionButton();
+  // Phase 1b will open the pre-session check-in modal here.
+}
+
+function endSession(){
+  if(!S.sessionId) return;
+  const sid = S.sessionId;
+  console.log('[Cadence] Session ended:', sid);
+  // Phase 1c will (1) open post-session tag modal, (2) write to Firestore, (3) prune 10+ day old docs.
+  // For Phase 1a we just clear the in-memory record so the button returns to "Start Session".
+  S.sessionId = null;
+  S.sessionStartMs = null;
+  updateSessionButton();
+}
+
+function updateSessionButton(){
+  const btn = document.getElementById('btnStartSession');
+  if(!btn) return;
+  if(S.sessionId){
+    btn.textContent = 'End Session';
+    btn.disabled = false;
+    btn.classList.add('session-active');
+    btn.title = 'End the current recorded session';
+  } else if(S.connected){
+    btn.textContent = 'Start Session';
+    btn.disabled = false;
+    btn.classList.remove('session-active');
+    btn.title = 'Begin a new recorded trading session';
+  } else {
+    btn.textContent = 'Start Session';
+    btn.disabled = true;
+    btn.classList.remove('session-active');
+    btn.title = 'Connect a sensor first';
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2308,6 +2416,12 @@ function wire(){
   $('btnExportCsv').onclick = exportCsv;
   $('btnClearLog').onclick  = clearSession;
 
+  // v0.9.4 · Phase 1a: Start/End Session toggle
+  $('btnStartSession').onclick = () => {
+    if(S.sessionId) endSession();
+    else            startSession();
+  };
+
   $('demoSpike').onclick = () => { demoTarget = 148; setTimeout(()=>demoTarget=95, 30000); };
   $('demoSlow').onclick  = () => { demoTarget = 65; };
   $('demoOff').onclick   = () => { disconnectSensor(); };
@@ -2380,6 +2494,7 @@ function init(){
   renderLog();
   wire();
   preflightBanner();
+  updateSessionButton();  // v0.9.4: set initial button state (disabled, no session)
 
   setInterval(tickUi, 1000);
 
