@@ -496,7 +496,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.11.7 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.8 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -780,6 +780,44 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   </div>
 </div>
 
+<!-- ═══════════════ POST-SESSION TAG MODAL (v0.11.8 · Phase 1c) ═══════════════ -->
+<div class="mbg" id="postCheckinModal">
+  <div class="mbox">
+    <div class="mhdr">
+      <div>
+        <div class="mti">How did that session feel?</div>
+        <div class="msub">Multi-select tags. Reflection optional. Everything saves to this session's record for later correlation with trade outcomes.</div>
+      </div>
+      <button class="mclose" id="postCheckinClose" title="Skip tagging">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fld">
+        <label class="fld-lbl">Tags</label>
+        <div class="fld-row" id="postTagRow" style="gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" data-tag="locked-in" type="button">🎯 locked-in</button>
+          <button class="btn btn-sm" data-tag="sharp" type="button">⚡ sharp</button>
+          <button class="btn btn-sm" data-tag="discipline" type="button">🛡 discipline</button>
+          <button class="btn btn-sm" data-tag="tilted" type="button">😤 tilted</button>
+          <button class="btn btn-sm" data-tag="reactive" type="button">⚠ reactive</button>
+          <button class="btn btn-sm" data-tag="revenge" type="button">🔥 revenge</button>
+        </div>
+        <div class="fld-h">Tap to toggle. Multiple allowed.</div>
+      </div>
+
+      <div class="fld" style="margin-top:14px">
+        <label class="fld-lbl" for="postReflection">Reflection <span style="color:var(--tx3);font-weight:400">(optional)</span></label>
+        <textarea class="inp" id="postReflection" rows="3" placeholder="Anything you want to remember about this session — best trade, worst decision, market read..."></textarea>
+      </div>
+
+      <div class="fld-h" id="postSessionStats" style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;font-family:var(--f-mono);color:var(--tx2);line-height:1.5">Session stats will appear here.</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="postSkip">Skip</button>
+      <button class="btn btn-primary" id="postSave">Save session</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ PRE-SESSION CHECK-IN MODAL (v0.11.7 · Phase 1b) ═══════════════ -->
 <div class="mbg" id="preCheckinModal">
   <div class="mbox">
@@ -1035,6 +1073,8 @@ const S = {
   // v0.11.7 · Phase 1b: rolling bucket recorder
   sessionBuckets: [],    // [{t, min, avg, max, n}]  — 10s aggregated BPM buckets
   bucketAccum: null,     // {startT, sum, n, min, max} — current bucket under accumulation
+  // v0.11.8 · Phase 1c: ended-session holder awaiting tag modal + Firestore write
+  pendingSession: null,  // snapshot of the just-ended session (null when nothing pending)
 
   // v0.10 · Morning reading & baseline calibration
   morningReadings: [],   // [{date:'YYYY-MM-DD', timestamp, durationSec, samples, avgBpm, minBpm, maxBpm, rmssd:null, sourceKind, complete, notes}]
@@ -2262,6 +2302,8 @@ function clearSession(){
   S.tierEvents = [];
   S.sessionBuckets = [];     // v0.11.7
   S.bucketAccum = null;      // v0.11.7
+  S.pendingSession = null;   // v0.11.8
+  try { localStorage.removeItem(LS_PENDING_KEY); } catch(e){}  // v0.11.8
   initTierState();
   renderAll();
   renderLog();
@@ -2368,6 +2410,182 @@ function wirePreCheckin(){
   if(saveBtn) saveBtn.addEventListener('click', savePreCheckin);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   POST-SESSION TAG MODAL + FIRESTORE WRITE + 10-DAY PRUNE (v0.11.8 · Phase 1c)
+   Lifecycle:
+     endSession() snapshots to S.pendingSession → openPostCheckin() → user saves/skips
+     → writePendingSessionToFirestore() → pruneOldSessions() → clear pending
+   If user closes the tab before saving, the next Cadence open sees S.pendingSession
+   in localStorage and re-prompts (see LS_PENDING_KEY handling in init()).
+═══════════════════════════════════════════════════════════ */
+const LS_PENDING_KEY = 'cadence_pending_session';   // survives page reload until resolved
+let _postSelectedTags = new Set();
+
+function openPostCheckin(){
+  if(!S.pendingSession){ console.warn('[Cadence] openPostCheckin called with no pending session'); return; }
+
+  // Persist pending session so it survives accidental tab close
+  try { localStorage.setItem(LS_PENDING_KEY, JSON.stringify(S.pendingSession)); }
+  catch(e){ console.warn('[Cadence] Failed to persist pending session:', e && e.message); }
+
+  // Reset form
+  _postSelectedTags = new Set();
+  document.querySelectorAll('#postTagRow [data-tag]').forEach(b => b.classList.remove('btn-primary'));
+  const r = document.getElementById('postReflection'); if(r) r.value = '';
+
+  // Show stats summary
+  const ps = S.pendingSession;
+  const mins = Math.round(ps.durMs / 60000);
+  const stats = document.getElementById('postSessionStats');
+  if(stats){
+    stats.innerHTML =
+      'Duration: <strong>' + mins + ' min</strong> · ' +
+      'Avg: <strong>' + (ps.summary.avgBpm || '—') + '</strong> · ' +
+      'Peak: <strong>' + (ps.summary.peakBpm || '—') + '</strong> · ' +
+      'Time ≥95: <strong>' + Math.round(ps.summary.chronicSec) + 's</strong> · ' +
+      'Tiers fired: <strong>' + (ps.summary.tiersFired.length ? ps.summary.tiersFired.join(', ') : 'none') + '</strong>';
+  }
+
+  const m = document.getElementById('postCheckinModal');
+  if(m) m.classList.add('on');
+}
+
+function closePostCheckin(){
+  const m = document.getElementById('postCheckinModal');
+  if(m) m.classList.remove('on');
+}
+
+function savePostCheckin(){
+  if(!S.pendingSession){ closePostCheckin(); return; }
+  const reflection = (document.getElementById('postReflection').value || '').trim();
+  S.pendingSession.postCheckin = {
+    tags: Array.from(_postSelectedTags),
+    reflection: reflection || null,
+    savedAt: Date.now()
+  };
+  console.log('[Cadence] Post-checkin saved:', S.pendingSession.postCheckin);
+  closePostCheckin();
+  writePendingSessionToFirestore();
+}
+
+function skipPostCheckin(){
+  // Still write the session — just without tags. Better to have data than lose it.
+  if(!S.pendingSession){ closePostCheckin(); return; }
+  S.pendingSession.postCheckin = null;
+  console.log('[Cadence] Post-checkin skipped — writing session without tags');
+  closePostCheckin();
+  writePendingSessionToFirestore();
+}
+
+function wirePostCheckin(){
+  document.querySelectorAll('#postTagRow [data-tag]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag;
+      if(_postSelectedTags.has(tag)){
+        _postSelectedTags.delete(tag);
+        btn.classList.remove('btn-primary');
+      } else {
+        _postSelectedTags.add(tag);
+        btn.classList.add('btn-primary');
+      }
+    });
+  });
+  const closeBtn = document.getElementById('postCheckinClose');
+  if(closeBtn) closeBtn.addEventListener('click', skipPostCheckin);
+  const skipBtn = document.getElementById('postSkip');
+  if(skipBtn) skipBtn.addEventListener('click', skipPostCheckin);
+  const saveBtn = document.getElementById('postSave');
+  if(saveBtn) saveBtn.addEventListener('click', savePostCheckin);
+}
+
+/* ─── Firestore write ───
+   One doc per session at cadence_sessions/{sessionId}.
+   Async, non-blocking. Failures log to console; pending session stays in localStorage
+   so a retry happens automatically on next Cadence open. */
+function writePendingSessionToFirestore(){
+  const ps = S.pendingSession;
+  if(!ps){ return; }
+  if(!window._cadenceDb){
+    console.warn('[Cadence] Firestore not available — keeping session in localStorage for retry');
+    return;
+  }
+  const docRef = window._cadenceDb.collection('cadence_sessions').doc(ps.sessionId);
+  docRef.set(ps)
+    .then(() => {
+      console.log('[Cadence] ✓ Session written to Firestore:', ps.sessionId,
+        '— dateKey:', ps.dateKey, '— buckets:', ps.buckets.length);
+      // Successful write — clear pending holder and the localStorage retry copy
+      try { localStorage.removeItem(LS_PENDING_KEY); } catch(e){}
+      S.pendingSession = null;
+      // Kick off the 10-day prune (fire-and-forget)
+      pruneOldSessions().catch(err => console.warn('[Cadence] Prune error:', err && err.message));
+    })
+    .catch(err => {
+      console.error('[Cadence] ✗ Firestore write failed:', err && err.message);
+      // Leave S.pendingSession + localStorage intact so we can retry later
+    });
+}
+
+/* ─── 10-day prune ───
+   Deletes docs whose dateKey is older than 10 calendar days ago (America/New_York).
+   Only runs after a successful write so a transient network issue doesn't nuke old data. */
+async function pruneOldSessions(){
+  if(!window._cadenceDb) return;
+  const now = Date.now();
+  const cutoffMs = now - (10 * 24 * 60 * 60 * 1000);
+  const cutoffKey = computeDateKeyET(cutoffMs);
+  const snap = await window._cadenceDb
+    .collection('cadence_sessions')
+    .where('dateKey', '<', cutoffKey)
+    .get();
+  if(snap.empty){
+    console.log('[Cadence] Prune: nothing older than ' + cutoffKey);
+    return;
+  }
+  console.log('[Cadence] Prune: ' + snap.size + ' doc(s) older than ' + cutoffKey);
+  const batch = window._cadenceDb.batch();
+  snap.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+  console.log('[Cadence] ✓ Pruned ' + snap.size + ' session(s)');
+}
+
+/* ─── Recover pending session on app boot ───
+   If the browser crashed or tab was closed between endSession() and Firestore write,
+   LS_PENDING_KEY will contain the session. Re-open the post-checkin modal so the user
+   can tag it (or skip → write without tags). Fire-and-forget retry if they already
+   tagged before the crash. */
+function recoverPendingSession(){
+  let raw;
+  try { raw = localStorage.getItem(LS_PENDING_KEY); } catch(e){ return; }
+  if(!raw) return;
+  try {
+    const ps = JSON.parse(raw);
+    if(!ps || !ps.sessionId || !ps.startMs){ localStorage.removeItem(LS_PENDING_KEY); return; }
+    const ageMs = Date.now() - ps.endMs;
+    // If session ended >24 hrs ago, don't harass user. Write it without tags.
+    if(ageMs > 24*3600*1000){
+      S.pendingSession = ps;
+      console.log('[Cadence] Pending session >24hrs old — writing without further prompt');
+      writePendingSessionToFirestore();
+      return;
+    }
+    // Already tagged? Just retry the write.
+    if(ps.postCheckin){
+      S.pendingSession = ps;
+      console.log('[Cadence] Pending session already tagged — retrying write');
+      writePendingSessionToFirestore();
+      return;
+    }
+    // Not tagged, recent — prompt user
+    S.pendingSession = ps;
+    console.log('[Cadence] Recovered pending session — prompting for tags');
+    openPostCheckin();
+  } catch(e){
+    console.warn('[Cadence] Pending session JSON corrupt, discarding:', e && e.message);
+    try { localStorage.removeItem(LS_PENDING_KEY); } catch(_){}
+  }
+}
+
 function startSession(){
   if(!S.connected) return;          // guard: only start if sensor live
   if(S.sessionId) return;           // already in a session
@@ -2415,17 +2633,77 @@ function endSession(){
   const sid = S.sessionId;
   // v0.11.7 · Phase 1b: close final partial bucket into the array
   flushSessionBucket();
+
+  // v0.11.8 · Phase 1c: snapshot the completed session into pendingSession.
+  // This snapshot survives the clearing of live state below, and is what gets
+  // written to Firestore when the user saves or skips the post-checkin.
+  const startedAt = S.sessionStartMs;
+  const endedAt = Date.now();
+  const durMs = endedAt - startedAt;
+  // dateKey uses America/New_York CME-style cutoff (6pm ET rollover). Matches TradeLog.
+  const dateKey = computeDateKeyET(startedAt);
+  const avgBpm = S.nBpm > 0 ? Math.round(S.sumBpm / S.nBpm) : null;
+  S.pendingSession = {
+    sessionId: sid,
+    startMs: startedAt,
+    endMs: endedAt,
+    durMs: durMs,
+    dateKey: dateKey,
+    source: S.sourceKind || 'unknown',
+    preCheckin: S.preCheckin,            // may be null if user skipped
+    postCheckin: null,                   // filled in when savePostCheckin() runs
+    buckets: S.sessionBuckets.slice(),   // shallow copy
+    tierEvents: S.tierEvents.slice(),    // shallow copy
+    summary: {
+      avgBpm: avgBpm,
+      peakBpm: S.maxBpm > 0 ? S.maxBpm : null,
+      minBpm: S.minBpm < 999 ? S.minBpm : null,
+      chronicSec: Math.round(S.chronicSec),
+      tiersFired: S.tierEvents.map(e => e.tier)
+    }
+  };
+
   console.log('[Cadence] Session ended:', sid,
+    '— duration:', Math.round(durMs/1000)+'s',
     '— buckets:', S.sessionBuckets.length,
     '— tier events:', S.tierEvents.length,
     '— pre-checkin:', S.preCheckin ? 'saved' : 'skipped');
-  // Phase 1c will: (1) open post-session tag modal, (2) write to Firestore, (3) prune 10-day-old docs.
-  // For Phase 1a/1b we just clear the in-memory record.
+
+  // Clear live state so a new session can start cleanly
   S.sessionId = null;
   S.sessionStartMs = null;
   S.bucketAccum = null;
-  // Note: S.sessionBuckets / S.tierEvents / S.preCheckin kept briefly so Phase 1c can read them;
-  // they get cleared by clearSession() or the next startSession().
+  // Note: S.sessionBuckets / S.tierEvents / S.preCheckin kept briefly so UI can still
+  // read them during the post-checkin modal display. clearSession() or the next
+  // startSession() resets them.
+
+  // Open the post-session tag modal. If user skips/closes, we still write to Firestore
+  // (summary + data, no tags) so the session isn't lost. If user saves, tags go with it.
+  openPostCheckin();
+}
+
+/* v0.11.8 · CME-style date key: America/New_York, rolling over at 6pm ET.
+   Matches TradeLog Pro's dateKey format so HR sessions and trades share a day boundary. */
+function computeDateKeyET(unixMs){
+  const d = new Date(unixMs);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', hour12: false
+  }).formatToParts(d);
+  const get = n => { const p = parts.find(x => x.type === n); return p ? p.value : ''; };
+  let y = parseInt(get('year'));
+  let m = parseInt(get('month'));
+  let day = parseInt(get('day'));
+  const hr = parseInt(get('hour')) || 0;
+  // Before 6pm ET = previous trading day (standard CME convention)
+  if(hr < 18){
+    const prior = new Date(Date.UTC(y, m-1, day) - 24*3600*1000);
+    y = prior.getUTCFullYear();
+    m = prior.getUTCMonth() + 1;
+    day = prior.getUTCDate();
+  }
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2877,6 +3155,8 @@ function wire(){
 
   // v0.11.7 · Phase 1b: pre-session check-in modal
   wirePreCheckin();
+  // v0.11.8 · Phase 1c: post-session tag modal
+  wirePostCheckin();
 
   $('demoSpike').onclick = () => { demoTarget = 148; setTimeout(()=>demoTarget=95, 30000); };
   $('demoSlow').onclick  = () => { demoTarget = 65; };
@@ -3469,6 +3749,9 @@ function init(){
   wireHistoryModal();
   renderMorningCard();
   preflightBanner();
+
+  // v0.11.8 · Phase 1c: re-prompt / retry any session that wasn't saved before tab closed
+  recoverPendingSession();
 
   setInterval(tickUi, 1000);
 
