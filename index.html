@@ -496,7 +496,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.11.6 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.7 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -780,6 +780,52 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   </div>
 </div>
 
+<!-- ═══════════════ PRE-SESSION CHECK-IN MODAL (v0.11.7 · Phase 1b) ═══════════════ -->
+<div class="mbg" id="preCheckinModal">
+  <div class="mbox">
+    <div class="mhdr">
+      <div>
+        <div class="mti">Quick pre-session check-in</div>
+        <div class="msub">Takes 15 seconds. Helps correlate trade outcomes with how you showed up today. All fields optional — skip anything.</div>
+      </div>
+      <button class="mclose" id="preCheckinClose" title="Skip check-in">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fld">
+        <label class="fld-lbl">Sleep last night — <span class="mono" id="pcSleepVal" style="color:var(--t0)">7.0 hrs</span></label>
+        <input type="range" class="rng" id="pcSleep" min="4" max="10" step="0.5" value="7">
+        <div class="fld-h">4 hrs ← → 10 hrs</div>
+      </div>
+
+      <div class="fld">
+        <label class="fld-lbl">Mood / readiness</label>
+        <div class="fld-row" id="pcMoodRow" style="gap:6px">
+          <button class="btn btn-sm" data-mood="1" type="button">😴 1</button>
+          <button class="btn btn-sm" data-mood="2" type="button">😕 2</button>
+          <button class="btn btn-sm" data-mood="3" type="button">😐 3</button>
+          <button class="btn btn-sm" data-mood="4" type="button">🙂 4</button>
+          <button class="btn btn-sm" data-mood="5" type="button">💪 5</button>
+        </div>
+        <div class="fld-h">1 = flat, 5 = sharp / locked-in</div>
+      </div>
+
+      <div class="fld fld-row" style="justify-content:space-between;gap:24px;padding-top:4px">
+        <label class="sw"><input type="checkbox" id="pcHydrated"><span class="sw-t"></span><span>Hydrated</span></label>
+        <label class="sw"><input type="checkbox" id="pcAte"><span class="sw-t"></span><span>Ate something</span></label>
+      </div>
+
+      <div class="fld" style="margin-top:14px">
+        <label class="fld-lbl" for="pcNote">Note <span style="color:var(--tx3);font-weight:400">(optional)</span></label>
+        <textarea class="inp" id="pcNote" rows="2" placeholder="Anything on your mind — news, positions carried overnight, etc."></textarea>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="pcSkip">Skip</button>
+      <button class="btn btn-primary" id="pcSave">Save &amp; start session</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ CONNECT HELPER MODAL ═══════════════ -->
 <div class="mbg" id="helpModal">
   <div class="mbox">
@@ -845,6 +891,7 @@ const SAMPLE_WINDOW_MS = 2 * 60 * 1000;   // 2-min scrolling chart
 const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
 const STALE_MS         = 6000;            // BPM grey-out after no update
 const LS_KEY           = 'cadence';
+const BUCKET_MS        = 10000;           // v0.11.7 · Phase 1b: 10-second session buckets
 const LS_MORNING_KEY   = 'cadence_morning';    // v0.10: separate store for morning-reading data
 
 /* v0.10 · Morning reading & baseline calibration */
@@ -985,6 +1032,9 @@ const S = {
   sessionStartMs: null,  // unix ms start of recorded session
   preCheckin: null,      // {sleep, mood, hydrated, ate, note, savedAt}  (populated in Phase 1b)
   tierEvents: [],        // {tier, level, enter, exit, peakBpm, durMs, fired}  (populated in Phase 1b)
+  // v0.11.7 · Phase 1b: rolling bucket recorder
+  sessionBuckets: [],    // [{t, min, avg, max, n}]  — 10s aggregated BPM buckets
+  bucketAccum: null,     // {startT, sum, n, min, max} — current bucket under accumulation
 
   // v0.10 · Morning reading & baseline calibration
   morningReadings: [],   // [{date:'YYYY-MM-DD', timestamp, durationSec, samples, avgBpm, minBpm, maxBpm, rmssd:null, sourceKind, complete, notes}]
@@ -1299,6 +1349,7 @@ function tickAcute(bpm, now){
         if(s.firedAt === null || (now - s.firedAt) >= cdMs){
           s.fired = true;
           s.firedAt = now;
+          logTierEvent(t.id, t.level, bpm, 'acute');   // v0.11.7
           if(!newlyFired || t.level > newlyFired.level) newlyFired = t;
         }
       }
@@ -1339,6 +1390,7 @@ function tickChronic(bpm, now){
   CHRONIC_TIERS.forEach(t => {
     if(!S.chronicFired[t.id] && S.chronicSec >= t.sec){
       S.chronicFired[t.id] = true;
+      logTierEvent(t.id, t.level, bpm, 'chronic');   // v0.11.7
       fireTierCue(t, /*interrupt*/ false);
     }
   });
@@ -1443,6 +1495,11 @@ function onBpm(bpm, ts){
     S.sumBpm += bpm;
     S.nBpm   += 1;
   }
+
+  // v0.11.7 · Phase 1b: 10-second bucket recorder for the active recorded session.
+  // Only accumulates when S.sessionId is set (i.e. we're inside an intentional session,
+  // not off-hours, not pre-connect). Buckets persist into the Firestore write in Phase 1c.
+  if(S.sessionId && bpm > 0) recordSessionBucket(bpm, now);
 
   // Samples for chart
   S.samples.push({ t: now, bpm });
@@ -2203,6 +2260,8 @@ function clearSession(){
   S.sessionStartMs = null;
   S.preCheckin = null;
   S.tierEvents = [];
+  S.sessionBuckets = [];     // v0.11.7
+  S.bucketAccum = null;      // v0.11.7
   initTierState();
   renderAll();
   renderLog();
@@ -2227,6 +2286,88 @@ function isMarketHours(now){
   return isVoiceAlertHours(now);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PRE-SESSION CHECK-IN MODAL (v0.11.7 · Phase 1b)
+   Opens on startSession(). All fields optional; Skip/X closes without saving.
+   Saving populates S.preCheckin which Phase 1c writes to Firestore alongside the session.
+═══════════════════════════════════════════════════════════ */
+let _pcSelectedMood = null;
+
+function openPreCheckin(){
+  // Reset form state on every open
+  _pcSelectedMood = null;
+  const sleepEl = document.getElementById('pcSleep');
+  if(sleepEl){
+    sleepEl.value = 7;
+    const sv = document.getElementById('pcSleepVal');
+    if(sv) sv.textContent = '7.0 hrs';
+  }
+  const hyd = document.getElementById('pcHydrated'); if(hyd) hyd.checked = false;
+  const ate = document.getElementById('pcAte');       if(ate) ate.checked = false;
+  const note = document.getElementById('pcNote');     if(note) note.value = '';
+  document.querySelectorAll('#pcMoodRow [data-mood]').forEach(b => b.classList.remove('btn-primary'));
+
+  const m = document.getElementById('preCheckinModal');
+  if(m) m.classList.add('on');
+}
+
+function closePreCheckin(){
+  const m = document.getElementById('preCheckinModal');
+  if(m) m.classList.remove('on');
+}
+
+function savePreCheckin(){
+  // Only save if a session is actually active (defensive — if user connects, skips check-in,
+  // disconnects, then this callback somehow fires, don't write stale data)
+  if(!S.sessionId){ closePreCheckin(); return; }
+  const sleep = parseFloat(document.getElementById('pcSleep').value) || null;
+  const hydrated = !!document.getElementById('pcHydrated').checked;
+  const ate      = !!document.getElementById('pcAte').checked;
+  const note     = (document.getElementById('pcNote').value || '').trim();
+  S.preCheckin = {
+    sleep: sleep,
+    mood: _pcSelectedMood,          // 1-5 or null if not selected
+    hydrated: hydrated,
+    ate: ate,
+    note: note || null,
+    savedAt: Date.now()
+  };
+  console.log('[Cadence] Pre-checkin saved:', S.preCheckin);
+  closePreCheckin();
+}
+
+function wirePreCheckin(){
+  // Sleep slider live readout
+  const sleepEl = document.getElementById('pcSleep');
+  const sleepVal = document.getElementById('pcSleepVal');
+  if(sleepEl && sleepVal){
+    sleepEl.addEventListener('input', () => {
+      sleepVal.textContent = parseFloat(sleepEl.value).toFixed(1) + ' hrs';
+    });
+  }
+  // Mood chip buttons — single-select toggle
+  document.querySelectorAll('#pcMoodRow [data-mood]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.mood);
+      if(_pcSelectedMood === val){
+        // Tapping same chip again deselects
+        _pcSelectedMood = null;
+        btn.classList.remove('btn-primary');
+      } else {
+        _pcSelectedMood = val;
+        document.querySelectorAll('#pcMoodRow [data-mood]').forEach(b => b.classList.remove('btn-primary'));
+        btn.classList.add('btn-primary');
+      }
+    });
+  });
+  const closeBtn = document.getElementById('preCheckinClose');
+  if(closeBtn) closeBtn.addEventListener('click', closePreCheckin);
+  const skipBtn = document.getElementById('pcSkip');
+  if(skipBtn) skipBtn.addEventListener('click', closePreCheckin);
+  const saveBtn = document.getElementById('pcSave');
+  if(saveBtn) saveBtn.addEventListener('click', savePreCheckin);
+}
+
 function startSession(){
   if(!S.connected) return;          // guard: only start if sensor live
   if(S.sessionId) return;           // already in a session
@@ -2238,11 +2379,14 @@ function startSession(){
   const startMs = Date.now();
   S.sessionId = 'sess_' + startMs;
   S.sessionStartMs = startMs;
-  S.preCheckin = null;              // Phase 1b populates this
-  S.tierEvents = [];                // Phase 1b populates this
+  S.preCheckin = null;              // populated when user saves pre-session check-in
+  S.tierEvents = [];                // populated by logTierEvent() from tickAcute/tickChronic
+  S.sessionBuckets = [];            // populated by recordSessionBucket() every 10s
+  S.bucketAccum = null;
   console.log('[Cadence] Session started:', S.sessionId);
   renderOffHoursBanner(false);
-  // Phase 1b will open the pre-session check-in modal here.
+  // v0.11.7 · Phase 1b: open pre-session check-in (dismissible)
+  openPreCheckin();
 }
 
 /* Renders / hides the "off-hours · not recording" banner. */
@@ -2269,11 +2413,68 @@ function renderOffHoursBanner(show){
 function endSession(){
   if(!S.sessionId) return;
   const sid = S.sessionId;
-  console.log('[Cadence] Session ended:', sid);
+  // v0.11.7 · Phase 1b: close final partial bucket into the array
+  flushSessionBucket();
+  console.log('[Cadence] Session ended:', sid,
+    '— buckets:', S.sessionBuckets.length,
+    '— tier events:', S.tierEvents.length,
+    '— pre-checkin:', S.preCheckin ? 'saved' : 'skipped');
   // Phase 1c will: (1) open post-session tag modal, (2) write to Firestore, (3) prune 10-day-old docs.
-  // For Phase 1a we just clear the in-memory record.
+  // For Phase 1a/1b we just clear the in-memory record.
   S.sessionId = null;
   S.sessionStartMs = null;
+  S.bucketAccum = null;
+  // Note: S.sessionBuckets / S.tierEvents / S.preCheckin kept briefly so Phase 1c can read them;
+  // they get cleared by clearSession() or the next startSession().
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SESSION BUCKET RECORDER (v0.11.7 · Phase 1b)
+   Aggregates 1Hz BPM samples into 10-second buckets {t, min, avg, max, n}.
+   Buckets are fixed-boundary (aligned to 10s wall clock) so same timestamps across
+   sessions line up cleanly for charting. Partial final bucket is flushed on session end.
+═══════════════════════════════════════════════════════════ */
+function recordSessionBucket(bpm, now){
+  const slot = Math.floor(now / BUCKET_MS) * BUCKET_MS;
+  if(!S.bucketAccum || S.bucketAccum.startT !== slot){
+    // Boundary crossed — close out old accum into the array, start a new one
+    flushSessionBucket();
+    S.bucketAccum = { startT: slot, sum: 0, n: 0, min: bpm, max: bpm };
+  }
+  const a = S.bucketAccum;
+  a.sum += bpm;
+  a.n   += 1;
+  if(bpm < a.min) a.min = bpm;
+  if(bpm > a.max) a.max = bpm;
+}
+function flushSessionBucket(){
+  const a = S.bucketAccum;
+  if(!a || a.n === 0) return;
+  S.sessionBuckets.push({
+    t: a.startT,
+    min: a.min,
+    avg: Math.round(a.sum / a.n),
+    max: a.max,
+    n: a.n
+  });
+  S.bucketAccum = null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TIER EVENT LOGGER (v0.11.7 · Phase 1b)
+   Called from tickAcute/tickChronic when a tier fires. Pushes a structured event
+   into S.tierEvents for the Firestore write in Phase 1c and the TradeLog "Pull HR"
+   overlay. Independent of S.log (which is the human-readable session event log).
+═══════════════════════════════════════════════════════════ */
+function logTierEvent(tier, level, bpm, kind){
+  if(!S.sessionId) return;   // only capture during recorded sessions
+  S.tierEvents.push({
+    tier: tier,              // 'A1'..'A5' or 'C1'..'C5'
+    level: level,            // 1..5
+    kind: kind,              // 'acute' | 'chronic'
+    enter: Date.now(),
+    peakBpm: bpm
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2673,6 +2874,9 @@ function wire(){
 
   $('btnExportCsv').onclick = exportCsv;
   $('btnClearLog').onclick  = clearSession;
+
+  // v0.11.7 · Phase 1b: pre-session check-in modal
+  wirePreCheckin();
 
   $('demoSpike').onclick = () => { demoTarget = 148; setTimeout(()=>demoTarget=95, 30000); };
   $('demoSlow').onclick  = () => { demoTarget = 65; };
