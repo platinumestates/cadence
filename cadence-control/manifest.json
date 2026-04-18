@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Cadence Control",
-  "version": "0.4.1",
-  "description": "Enforcement layer for Cadence HRM — confirmed TopstepX selectors, per-account tier state, practice guard, daily locks, deletion watchdog.",
+  "version": "0.5.0",
+  "description": "Enforcement layer for Cadence HRM — surgical settings lock, two-stage PDLL, confirmed selectors, per-account tiers, daily locks, deletion watchdog.",
 
   "permissions": [
     "storage",
