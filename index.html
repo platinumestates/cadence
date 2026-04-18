@@ -104,9 +104,13 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 .stat{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:5px 12px 5px 8px;font-size:11px;font-family:var(--f-body);font-weight:500;color:var(--tx2);transition:all .2s}
 .stat.conn{border-color:rgba(66,229,229,.45);background:rgba(66,229,229,.1);color:var(--t0)}
 .stat.err{border-color:rgba(255,51,71,.45);background:var(--t4-bg);color:var(--t4)}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--tx3);box-shadow:0 0 0 0 rgba(255,255,255,.3)}
-.stat.conn .dot{background:var(--t0);animation:pulse 2.2s ease-in-out infinite}
-.stat.err .dot{background:var(--t4)}
+/* v0.11.10: dot as ::before pseudo-element on the text span, not a standalone empty span.
+   The empty-span approach rendered oversized in some Chrome cases, obscuring the first
+   letter of the status text. Same fix as v0.9.3 applied to the widget badge. */
+.stat > span{display:inline-flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0}
+.stat > span::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--tx3);flex:0 0 auto;box-shadow:0 0 0 0 rgba(255,255,255,.3)}
+.stat.conn > span::before{background:var(--t0);animation:pulse 2.2s ease-in-out infinite}
+.stat.err > span::before{background:var(--t4)}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(66,229,229,.5)}50%{box-shadow:0 0 0 6px rgba(66,229,229,0)}}
 
 /* ── BUTTONS ── */
@@ -496,12 +500,12 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.0 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.11 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
-      <div class="stat" id="connStat"><span class="dot"></span><span id="connText">Not connected</span></div>
-      <div class="stat" id="sessStat" style="display:none"><span class="dot"></span><span id="sessText">Session 00:00</span></div>
+      <div class="stat" id="connStat"><span id="connText">Not connected</span></div>
+      <div class="stat" id="sessStat" style="display:none"><span id="sessText">Session 00:00</span></div>
     </div>
 
     <div class="tb-r">
@@ -1051,6 +1055,7 @@ const S = {
   connected: false,
   connecting: false,
   sourceKind: null,         // 'bluetooth' | 'pulsoid' | 'demo' once connected
+  lastKnownSource: null,    // v0.11.11: preserved across disconnect so endSession() gets accurate metadata
   pulsoidSocket: null,
   pulsoidRetryTimer: null,
 
@@ -1622,6 +1627,7 @@ async function connectBluetooth(){
     S.connected = true;
     S.connecting = false;
     S.sourceKind = 'bluetooth';
+    S.lastKnownSource = 'bluetooth';
     setConnStatus('conn', device.name || 'Polar HR sensor');
     $('btnConnect').style.display = 'none';
     $('btnDisconnect').style.display = '';
@@ -1736,6 +1742,7 @@ async function connectPulsoid(){
       S.connected = true;
       S.connecting = false;
       S.sourceKind = 'pulsoid';
+      S.lastKnownSource = 'pulsoid';
       setConnStatus('conn', 'Pulsoid stream');
       $('btnConnect').style.display = 'none';
       $('btnDisconnect').style.display = '';
@@ -1834,6 +1841,8 @@ let demoCur = 72;
 function startDemo(){
   stopDemo();
   S.connected = true;
+  S.sourceKind = 'demo';        // v0.11.11: wire demo source so endSession + morning filters see it
+  S.lastKnownSource = 'demo';
   setConnStatus('conn', 'Demo simulator');
   $('btnConnect').style.display = 'none';
   $('btnDisconnect').style.display = '';
@@ -2182,10 +2191,12 @@ function renderWidget(){
   wBpm.textContent = S.currentBpm || '—';
   wBpm.className = 'w-bpm' + (stale?' stale':'') + (S.currentBpm ? ' t-'+curBand : '');
 
-  // v0.9.1: Heartbeat pulse — fires when BPM puts you in tier 1+ (≥95 bpm, v0.9.3),
-  // beat duration synced to actual heart rate (60000ms / bpm).
-  // Stale/disconnected state suppresses animation.
-  if(!stale && S.currentBpm && curBand >= 1){
+  // v0.9.1: Heartbeat pulse — fires when BPM puts you in tier 2+ (≥90 bpm, "Elevated" band).
+  // Beat duration synced to actual heart rate (60000ms / bpm).
+  // v0.11.10: moved from tier 1 (≥76 Engaged) back to tier 2 — user feedback that tier 1
+  // fires during normal desk movement, making pulse noisy. Widget stays visually calm
+  // until HR actually leaves the normal range.
+  if(!stale && S.currentBpm && curBand >= 2){
     wBpm.classList.add('beating');
     wBpm.style.setProperty('--beat-duration', Math.round(60000 / S.currentBpm) + 'ms');
   } else {
@@ -2531,17 +2542,13 @@ function writePendingSessionToFirestore(){
     });
 }
 
-/* ─── 30-day prune (v0.12.0 · extended from 10-day) ───
-   Deletes docs whose dateKey is older than 30 calendar days ago (America/New_York).
-   Extended from 10 → 30 days to give TradeLog Pro a wider window to pull HR data
-   onto trade records. TradeLog copies HR snippets onto trades on "Pull HR" click,
-   so data persists indefinitely once pulled. Prune prevents Firestore from growing
-   unbounded for sessions that will never be correlated to a trade.
+/* ─── 10-day prune ───
+   Deletes docs whose dateKey is older than 10 calendar days ago (America/New_York).
    Only runs after a successful write so a transient network issue doesn't nuke old data. */
 async function pruneOldSessions(){
   if(!window._cadenceDb) return;
   const now = Date.now();
-  const cutoffMs = now - (30 * 24 * 60 * 60 * 1000);
+  const cutoffMs = now - (10 * 24 * 60 * 60 * 1000);
   const cutoffKey = computeDateKeyET(cutoffMs);
   const snap = await window._cadenceDb
     .collection('cadence_sessions')
@@ -2661,7 +2668,7 @@ function endSession(){
     endMs: endedAt,
     durMs: durMs,
     dateKey: dateKey,
-    source: S.sourceKind || 'unknown',
+    source: S.sourceKind || S.lastKnownSource || 'unknown',
     preCheckin: S.preCheckin,            // may be null if user skipped
     postCheckin: null,                   // filled in when savePostCheckin() runs
     buckets: S.sessionBuckets.slice(),   // shallow copy
