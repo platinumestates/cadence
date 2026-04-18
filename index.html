@@ -496,7 +496,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.11.5 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.6 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -2219,28 +2219,19 @@ function clearSession(){
 /* v0.10.2 · Market hours gate — session recording only between Sun 5:45 PM and Fri 6:00 PM ET.
    Outside this window, the monitor still reads BPM and the tier engine still fires
    (protective behavior runs any time), but sessions are not written to Firestore. */
+/* v0.11.6 · Session-recording window — Friday 4:00 PM ET → Sunday 5:30 PM ET silence.
+   Aligned with isVoiceAlertHours(). Single source of truth: if voice is muted for
+   the weekend, sessions don't record for the weekend either. Update isVoiceAlertHours
+   to change both. */
 function isMarketHours(now){
-  now = now || new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false
-  }).formatToParts(now);
-  const get = name => { const p = parts.find(x => x.type === name); return p ? p.value : ''; };
-  const wd = get('weekday');
-  const hr = parseInt(get('hour')) || 0;
-  const mn = parseInt(get('minute')) || 0;
-  const totalMin = hr * 60 + mn;
-  if(wd === 'Sun') return totalMin >= 17*60 + 45;            // from Sun 5:45 PM ET
-  if(wd === 'Mon' || wd === 'Tue' || wd === 'Wed' || wd === 'Thu') return true;
-  if(wd === 'Fri') return totalMin < 18*60;                  // until Fri 6:00 PM ET
-  return false;                                              // Saturday
+  return isVoiceAlertHours(now);
 }
 
 function startSession(){
   if(!S.connected) return;          // guard: only start if sensor live
   if(S.sessionId) return;           // already in a session
   if(!isMarketHours()){
-    console.log('[Cadence] Off-hours — session not recorded (Sun 5:45 PM → Fri 6:00 PM ET)');
+    console.log('[Cadence] Off-hours — session not recorded (Fri 4:00 PM → Sun 5:30 PM ET)');
     renderOffHoursBanner(true);
     return;
   }
@@ -2269,7 +2260,7 @@ function renderOffHoursBanner(show){
   b.className = 'banner info';
   b.innerHTML = '<div class="banner-ic">i</div>'
     + '<div class="banner-body"><strong>Off-hours — connected for monitoring only.</strong>'
-    + '<em>Session recording resumes Sunday 5:45 PM ET. Live BPM and tier alerts still active.</em></div>'
+    + '<em>Session recording resumes Sunday 5:30 PM ET. Live BPM and tier alerts still active.</em></div>'
     + '<button class="banner-close" aria-label="Dismiss">&times;</button>';
   b.querySelector('.banner-close').addEventListener('click', () => b.remove());
   bw.appendChild(b);
