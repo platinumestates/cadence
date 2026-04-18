@@ -133,7 +133,7 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 
 /* ── LAYOUT ── */
 .app{display:flex;flex:1;overflow:hidden;flex-direction:column}
-.main{flex:1;overflow-y:auto;background:var(--bg);padding:20px 22px 24px;display:flex;flex-direction:column;align-items:stretch}
+.main{flex:1;overflow-y:auto;background:var(--bg);padding:20px 22px 24px;display:flex;flex-direction:column;align-items:stretch;scrollbar-gutter:stable}
 .main > *{max-width:1360px;margin-left:auto;margin-right:auto;width:100%}
 @media(max-width:700px){.main{padding:14px 14px 18px}}
 
@@ -158,6 +158,49 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 .demo-on-btn{background:var(--warn);color:#191510;border:2px solid #f5c863;padding:7px 13px;font-family:var(--f-body);font-weight:800;font-size:11px;border-radius:7px;cursor:pointer;letter-spacing:1.6px;text-transform:uppercase;transition:all .15s;margin-right:4px;animation:demoPulse 2.4s ease-in-out infinite}
 .demo-on-btn:hover{background:#f5c863;transform:scale(1.04)}
 @keyframes demoPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,185,94,.55)}50%{box-shadow:0 0 0 10px rgba(232,185,94,0)}}
+
+/* v0.11 · Reset button on dashboard for ad-hoc breath pacer launch */
+.reset-fab{position:fixed;bottom:18px;left:18px;z-index:40;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);padding:9px 14px;font-family:var(--f-body);font-weight:600;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;border-radius:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;align-items:center;gap:8px;transition:all .2s}
+.reset-fab:hover{color:var(--t0);border-color:var(--t0);background:var(--bg1)}
+.reset-fab .ic{font-size:13px}
+body.widget .reset-fab{display:none}
+
+/* v0.11 · Breath pacer modal — full-screen, immersive */
+.pacer-bg{position:fixed;inset:0;background:radial-gradient(ellipse at center,#051520 0%,#020810 60%,#000 100%);z-index:3000;display:none;align-items:center;justify-content:center;flex-direction:column}
+.pacer-bg.on{display:flex}
+.pacer-circle-wrap{position:relative;width:340px;height:340px;display:flex;align-items:center;justify-content:center;margin-bottom:34px}
+.pacer-circle{position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle at center,rgba(66,229,229,.25) 0%,rgba(66,229,229,.08) 55%,transparent 100%);border:2px solid rgba(66,229,229,.45);box-shadow:0 0 60px rgba(66,229,229,.35),inset 0 0 40px rgba(66,229,229,.2);transition:transform var(--pacer-inhale,4s) cubic-bezier(.4,0,.4,1),border-color .5s,box-shadow .5s}
+.pacer-circle.inhale{transform:scale(2.0);transition-duration:var(--pacer-inhale,4s);transition-timing-function:cubic-bezier(.4,0,.4,1);border-color:rgba(232,185,94,.6);box-shadow:0 0 90px rgba(232,185,94,.4),inset 0 0 60px rgba(232,185,94,.3)}
+.pacer-circle.exhale{transform:scale(1.0);transition-duration:var(--pacer-exhale,6s);transition-timing-function:cubic-bezier(.4,0,.4,1)}
+.pacer-circle.hold{transition-duration:0s}
+.pacer-phase{font-family:var(--f-head);font-size:36px;font-weight:500;font-style:italic;color:var(--tx);letter-spacing:-.5px;margin-bottom:10px;min-height:46px;text-align:center}
+.pacer-sub{font-family:var(--f-body);font-size:13px;color:var(--tx2);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;margin-bottom:30px;min-height:16px}
+.pacer-timer{font-family:var(--f-mono);font-size:15px;color:var(--tx3);font-variant-numeric:tabular-nums;margin-bottom:20px}
+.pacer-actions{display:flex;gap:12px}
+.pacer-btn{background:var(--bg2);border:1px solid var(--bd2);color:var(--tx);padding:10px 22px;font-family:var(--f-body);font-weight:600;font-size:12px;border-radius:8px;cursor:pointer;letter-spacing:.3px;transition:all .15s}
+.pacer-btn:hover{border-color:var(--bd3);background:var(--bg3)}
+.pacer-btn.primary{background:var(--t0);color:#001b1f;border-color:var(--t0)}
+.pacer-btn.primary:hover{background:#5cffff;color:#001b1f}
+.pacer-btn.ghost{background:transparent;border-color:var(--bd)}
+.pacer-setup{text-align:center;padding:18px 30px;max-width:500px}
+.pacer-setup h2{font-family:var(--f-head);font-size:26px;font-weight:600;font-style:italic;color:var(--tx);margin-bottom:8px;letter-spacing:-.3px}
+.pacer-setup p{font-family:var(--f-body);font-size:13px;color:var(--tx2);line-height:1.55;margin-bottom:22px}
+.pacer-duration-row{display:flex;gap:8px;justify-content:center;margin-bottom:22px}
+.pacer-dur{background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);padding:10px 18px;font-family:var(--f-body);font-weight:600;font-size:12px;border-radius:8px;cursor:pointer;transition:all .15s}
+.pacer-dur.on{background:var(--t0);color:#001b1f;border-color:var(--t0)}
+.pacer-close-x{position:absolute;top:22px;right:26px;background:none;border:none;color:var(--tx3);font-size:24px;cursor:pointer;line-height:1;padding:4px 10px}
+.pacer-close-x:hover{color:var(--tx)}
+
+/* v0.11 · Reading history modal (replaces alert() placeholder) */
+.history-row{display:grid;grid-template-columns:80px 58px auto 60px 70px;gap:12px;padding:9px 4px;border-top:1px solid var(--bd);font-size:12.5px;align-items:center}
+.history-row:first-of-type{border-top:none}
+.history-row.invalid{opacity:.55}
+.history-date{font-family:var(--f-mono);font-size:11.5px;color:var(--tx2)}
+.history-bpm{font-family:var(--f-mono);font-size:15px;font-weight:600;color:var(--tx);font-variant-numeric:tabular-nums}
+.history-meta{font-size:10.5px;color:var(--tx3);font-family:var(--f-body)}
+.history-source{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);font-family:var(--f-body);font-weight:600}
+.history-badge-valid{display:inline-block;padding:2px 7px;font-size:9px;border-radius:4px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-family:var(--f-body);background:var(--t0-bg);color:var(--t0)}
+.history-badge-invalid{display:inline-block;padding:2px 7px;font-size:9px;border-radius:4px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-family:var(--f-body);background:var(--bg3);color:var(--tx3)}
 .bpm-u{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
 .bpm-u-lg{font-family:var(--f-head);font-size:18px;font-weight:500;font-style:italic;color:var(--tx2);line-height:1}
 .bpm-u-sm{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);font-weight:600}
@@ -447,7 +490,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.10.3 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.0 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -774,7 +817,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.10.3 — HRM Trading Companion
+   CADENCE v0.11.0 — HRM Trading Companion
    v0.9:   detached popout widget via window.open + BroadcastChannel
    v0.9.1: stacked layout, heartbeat pulse on elevated
    v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220
@@ -2954,14 +2997,191 @@ function discardMorningReadingPending(){
 }
 
 function showMorningHistory(){
-  // Quick alert-style history — replace with modal in a later pass
+  const mb = document.getElementById('historyModal');
+  const body = document.getElementById('historyBody');
+  if(!mb || !body) return;
   const rs = [...S.morningReadings].reverse();
-  if(!rs.length){ alert('No readings yet.'); return; }
-  const lines = rs.slice(0, 30).map(r => {
-    const vmark = (r.complete && r.sourceKind !== 'demo') ? '✓' : '·';
-    return vmark + '  ' + r.date + '  ' + r.avgBpm.toFixed(1) + ' bpm  (' + r.durationSec + 's, ' + r.samples + ' samples, ' + r.sourceKind + ')';
+  if(!rs.length){
+    body.innerHTML = '<div class="log-empty">No readings yet. Capture one from the Morning Reading card on the dashboard.</div>';
+  } else {
+    const fmtTime = (ts) => {
+      const d = new Date(ts);
+      const h = d.getHours(), mm = String(d.getMinutes()).padStart(2,'0');
+      return ((h % 12) || 12) + ':' + mm + (h < 12 ? ' AM' : ' PM');
+    };
+    body.innerHTML = rs.map(r => {
+      const valid = r.complete && r.sourceKind !== 'demo';
+      return '<div class="history-row ' + (valid ? '' : 'invalid') + '">'
+        + '<div class="history-date">' + r.date + '</div>'
+        + '<div class="history-bpm">' + r.avgBpm.toFixed(1) + '</div>'
+        + '<div class="history-meta">min ' + r.minBpm + ' · max ' + r.maxBpm + ' · ' + r.samples + ' samples · ' + r.durationSec + 's · ' + fmtTime(r.timestamp) + '</div>'
+        + '<div class="history-source">' + (r.sourceKind || '?') + '</div>'
+        + '<div>' + (valid ? '<span class="history-badge-valid">counts</span>' : '<span class="history-badge-invalid">skip</span>') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  mb.classList.add('on');
+}
+
+function exportMorningHistoryCsv(){
+  if(!S.morningReadings.length){ alert('Nothing to export.'); return; }
+  const header = 'date,timestamp,durationSec,samples,avgBpm,minBpm,maxBpm,rmssd,sourceKind,valid\n';
+  const rows = S.morningReadings.map(r => {
+    const valid = r.complete && r.sourceKind !== 'demo' ? 'true' : 'false';
+    return [r.date, r.timestamp, r.durationSec, r.samples, r.avgBpm.toFixed(2), r.minBpm, r.maxBpm, r.rmssd ?? '', r.sourceKind, valid].join(',');
+  }).join('\n');
+  const blob = new Blob([header + rows], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cadence_morning_readings_' + todayKey() + '.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function clearAllMorningReadings(){
+  if(!S.morningReadings.length){ alert('Nothing to clear.'); return; }
+  if(!confirm('Delete ALL ' + S.morningReadings.length + ' morning readings? This cannot be undone.')) return;
+  S.morningReadings = [];
+  S.morningLastReminderKey = null;
+  saveMorningReadings();
+  renderMorningCard();
+  showMorningHistory();  // refresh the modal in place
+}
+
+/* ═══════════════════════════════════════════════════════════
+   v0.11 · BREATH PACER — standalone reset tool
+   Open from the Reset FAB (bottom-left). Later: also launched
+   from Tier 2 forced-engagement overlay and post-loss lockouts.
+═══════════════════════════════════════════════════════════ */
+const PACER = {
+  inhaleMs: 4000,
+  exhaleMs: 6000,
+  totalMs: 0,
+  startedAt: 0,
+  cycleTimer: null,
+  tickTimer: null,
+  phase: 'idle',    // idle | inhale | exhale | done
+  selectedMin: 1,
+};
+
+function openPacer(){
+  const mb = document.getElementById('pacerModal');
+  if(!mb) return;
+  mb.classList.add('on');
+  document.getElementById('pacerSetup').style.display = '';
+  document.getElementById('pacerRunning').style.display = 'none';
+  document.getElementById('pacerDone').style.display = 'none';
+  // Set CSS variables so the circle animation duration matches pacer timing
+  document.documentElement.style.setProperty('--pacer-inhale', (PACER.inhaleMs/1000) + 's');
+  document.documentElement.style.setProperty('--pacer-exhale', (PACER.exhaleMs/1000) + 's');
+}
+
+function closePacer(){
+  stopPacer();
+  document.getElementById('pacerModal').classList.remove('on');
+}
+
+function beginPacer(){
+  document.getElementById('pacerSetup').style.display = 'none';
+  document.getElementById('pacerRunning').style.display = '';
+  document.getElementById('pacerDone').style.display = 'none';
+  PACER.totalMs = PACER.selectedMin * 60 * 1000;
+  PACER.startedAt = Date.now();
+  PACER.phase = 'inhale';
+  // Speak once at start — quiet, slow.
+  try{ speak('Breathe in.'); }catch(e){}
+  runPacerCycle();
+  PACER.tickTimer = setInterval(tickPacer, 250);
+}
+
+function runPacerCycle(){
+  const circle = document.getElementById('pacerCircle');
+  const phaseEl = document.getElementById('pacerPhase');
+  const subEl = document.getElementById('pacerSub');
+  if(!circle || !phaseEl) return;
+
+  // Inhale phase
+  circle.classList.remove('exhale');
+  circle.classList.add('inhale');
+  phaseEl.textContent = 'Breathe in';
+  subEl.textContent = 'through the nose';
+  // Voice is optional — quiet cue. Comment out if annoying.
+  PACER.cycleTimer = setTimeout(() => {
+    // Exhale phase
+    circle.classList.remove('inhale');
+    circle.classList.add('exhale');
+    phaseEl.textContent = 'Breathe out';
+    subEl.textContent = 'long · slow';
+    try{ speak('Out.'); }catch(e){}
+    PACER.cycleTimer = setTimeout(() => {
+      if(Date.now() - PACER.startedAt >= PACER.totalMs){
+        finishPacer();
+      } else {
+        runPacerCycle();
+      }
+    }, PACER.exhaleMs);
+  }, PACER.inhaleMs);
+}
+
+function tickPacer(){
+  const elapsed = Date.now() - PACER.startedAt;
+  const remaining = Math.max(0, PACER.totalMs - elapsed);
+  const rMm = Math.floor(remaining / 60000);
+  const rSs = Math.floor((remaining % 60000) / 1000);
+  const tMm = Math.floor(PACER.totalMs / 60000);
+  document.getElementById('pacerTimer').textContent =
+    rMm + ':' + String(rSs).padStart(2,'0') + ' of ' + tMm + ':00';
+}
+
+function finishPacer(){
+  stopPacer(/*goToDone*/true);
+  document.getElementById('pacerRunning').style.display = 'none';
+  document.getElementById('pacerDone').style.display = '';
+  try{ speak('Good. That is a rep.'); }catch(e){}
+}
+
+function stopPacer(goToDone){
+  if(PACER.cycleTimer){ clearTimeout(PACER.cycleTimer); PACER.cycleTimer = null; }
+  if(PACER.tickTimer){ clearInterval(PACER.tickTimer); PACER.tickTimer = null; }
+  PACER.phase = goToDone ? 'done' : 'idle';
+  const circle = document.getElementById('pacerCircle');
+  if(circle){ circle.classList.remove('inhale','exhale'); }
+}
+
+function wirePacer(){
+  const fab = document.getElementById('resetFab');
+  if(fab) fab.addEventListener('click', openPacer);
+  const close = document.getElementById('pacerClose');
+  if(close) close.addEventListener('click', closePacer);
+  const cancel = document.getElementById('pacerCancelSetup');
+  if(cancel) cancel.addEventListener('click', closePacer);
+  const begin = document.getElementById('pacerBegin');
+  if(begin) begin.addEventListener('click', beginPacer);
+  const stop = document.getElementById('pacerStop');
+  if(stop) stop.addEventListener('click', () => { stopPacer(false); closePacer(); });
+  const closeDone = document.getElementById('pacerCloseDone');
+  if(closeDone) closeDone.addEventListener('click', closePacer);
+  document.querySelectorAll('.pacer-dur').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.pacer-dur').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      PACER.selectedMin = parseInt(b.dataset.min) || 3;
+    });
   });
-  alert('Morning reading history (last 30):\n\n' + lines.join('\n'));
+}
+
+function wireHistoryModal(){
+  const close = document.getElementById('historyClose');
+  if(close) close.addEventListener('click', () => document.getElementById('historyModal').classList.remove('on'));
+  const done = document.getElementById('historyDoneBtn');
+  if(done) done.addEventListener('click', () => document.getElementById('historyModal').classList.remove('on'));
+  const exp = document.getElementById('historyExport');
+  if(exp) exp.addEventListener('click', exportMorningHistoryCsv);
+  const clr = document.getElementById('historyClear');
+  if(clr) clr.addEventListener('click', clearAllMorningReadings);
+  const mb = document.getElementById('historyModal');
+  if(mb) mb.addEventListener('click', (e) => { if(e.target === mb) mb.classList.remove('on'); });
 }
 
 function wireMorningCard(){
@@ -3002,6 +3222,8 @@ function init(){
   renderLog();
   wire();
   wireMorningCard();
+  wirePacer();
+  wireHistoryModal();
   renderMorningCard();
   preflightBanner();
 
@@ -3084,6 +3306,67 @@ else init();
   </div>
 </div>
 
+
+<!-- ═══════════════ v0.11 RESET / BREATH PACER FLOATING BUTTON ═══════════════ -->
+<button class="reset-fab not-widget" id="resetFab" title="Open a 3- or 5-minute paced breathing session"><span class="ic">◐</span><span>Reset</span></button>
+
+<!-- ═══════════════ v0.11 BREATH PACER MODAL ═══════════════ -->
+<div class="pacer-bg" id="pacerModal">
+  <button class="pacer-close-x" id="pacerClose">✕</button>
+  <!-- Setup phase -->
+  <div id="pacerSetup" class="pacer-setup">
+    <h2>Reset</h2>
+    <p>Paced breathing. Four seconds in, six seconds out — the long exhale loads parasympathetic tone. Follow the circle. Do not force it.</p>
+    <div class="pacer-duration-row">
+      <button class="pacer-dur on" data-min="1">1 min</button>
+      <button class="pacer-dur" data-min="3">3 min</button>
+      <button class="pacer-dur" data-min="5">5 min</button>
+    </div>
+    <div class="pacer-actions" style="justify-content:center">
+      <button class="pacer-btn ghost" id="pacerCancelSetup">Cancel</button>
+      <button class="pacer-btn primary" id="pacerBegin">Begin</button>
+    </div>
+  </div>
+  <!-- Running phase -->
+  <div id="pacerRunning" style="display:none;text-align:center">
+    <div class="pacer-circle-wrap">
+      <div class="pacer-circle" id="pacerCircle"></div>
+    </div>
+    <div class="pacer-phase" id="pacerPhase">Get ready</div>
+    <div class="pacer-sub" id="pacerSub">settle · shoulders down</div>
+    <div class="pacer-timer" id="pacerTimer">0:00 of 3:00</div>
+    <div class="pacer-actions" style="justify-content:center">
+      <button class="pacer-btn ghost" id="pacerStop">End session</button>
+    </div>
+  </div>
+  <!-- Done phase -->
+  <div id="pacerDone" style="display:none;text-align:center;padding:20px">
+    <h2 style="font-family:var(--f-head);font-size:30px;font-style:italic;font-weight:600;color:var(--tx);margin-bottom:10px">Good.</h2>
+    <p style="font-size:13px;color:var(--tx2);line-height:1.5;max-width:420px;margin:0 auto 22px">That is a rep. The neural pattern of down-regulation gets stronger every time you do this.</p>
+    <button class="pacer-btn primary" id="pacerCloseDone">Done</button>
+  </div>
+</div>
+
+<!-- ═══════════════ v0.11 MORNING READING HISTORY MODAL ═══════════════ -->
+<div class="mbg" id="historyModal">
+  <div class="mbox wide">
+    <div class="mhdr">
+      <div>
+        <div class="mti">Morning reading history</div>
+        <div class="msub">Only complete, non-demo readings count toward your rolling baselines.</div>
+      </div>
+      <button class="mclose" id="historyClose">✕</button>
+    </div>
+    <div class="mbody" id="historyBody">
+      <div class="log-empty">No readings yet.</div>
+    </div>
+    <div class="mfoot">
+      <button class="morning-btn ghost" id="historyExport">Export CSV</button>
+      <button class="morning-btn ghost" id="historyClear">Clear all</button>
+      <button class="morning-btn" id="historyDoneBtn">Done</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
