@@ -1,4 +1,4 @@
-/* Cadence Control · Popup · v0.4.0 */
+/* Cadence Control · Popup · v0.5.0 */
 
 function fmtAge(ts) {
   if (!ts) return '—';
@@ -19,6 +19,9 @@ function render(state) {
   const dc = state.dailyConfig || {};
   const ladder = state.tierLadder || [];
   const ts = state.tierState || {};
+
+  /* ═══ PDLL section ═══ */
+  renderPdllSection();
 
   /* ═══ Daily limits section ═══ */
   renderDailySection(dc);
@@ -100,6 +103,121 @@ function render(state) {
       return '<div class="log-row"><span class="t">' + hm + '</span><b>' + e.type + '</b> ' + pay + '</div>';
     }).join('');
   }
+}
+
+function fmtCountdown(ms) {
+  if (!ms || ms <= 0) return '—';
+  const totalSec = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}m ${String(s).padStart(2, '0')}s`;
+}
+
+function renderPdllSection() {
+  chrome.runtime.sendMessage({ type: 'get-pdll-config' }, res => {
+    if (!res || !res.ok) return;
+    const pc = res.config;
+    const ti = res.timeInfo;
+
+    const statusTag = document.getElementById('pdllStatusTag');
+    const setupArea = document.getElementById('pdllSetupArea');
+    const lockedArea = document.getElementById('pdllLockedArea');
+    const rpnlEl = document.getElementById('pdllRPnL');
+
+    // Show RP&L if available
+    if (pc.lastRPnL !== null && pc.lastRPnL !== undefined) {
+      const neg = pc.lastRPnL < 0;
+      rpnlEl.textContent = `RP&L: ${neg ? '-' : ''}$${Math.abs(pc.lastRPnL).toFixed(0)}`;
+      rpnlEl.style.color = neg ? '#d11f3f' : '#34d399';
+    } else {
+      rpnlEl.textContent = '';
+    }
+
+    if (ti.isLocked) {
+      statusTag.textContent = pc.hardBreached ? 'HARD BREACH' : (pc.softBreached ? 'SOFT BREACH' : 'LOCKED');
+      statusTag.className = 'tag ' + (pc.hardBreached ? 'active' : (pc.softBreached ? 'warn' : 'locked'));
+      setupArea.style.display = 'none';
+      lockedArea.style.display = 'block';
+
+      document.getElementById('pdllLockedSoft').textContent = '-$' + pc.softLimit;
+      document.getElementById('pdllLockedHard').textContent = '-$' + pc.hardLimit;
+
+      // Soft status
+      const softEl = document.getElementById('pdllSoftStatus');
+      if (pc.softBreached) {
+        softEl.textContent = 'SPENT';
+        softEl.style.color = '#d11f3f';
+      } else {
+        softEl.textContent = 'armed';
+        softEl.style.color = '#34d399';
+      }
+
+      // Hard status
+      const hardEl = document.getElementById('pdllHardStatus');
+      if (pc.hardBreached) {
+        hardEl.textContent = 'BREACHED — session over';
+        hardEl.style.color = '#d11f3f';
+      } else {
+        hardEl.textContent = 'armed';
+        hardEl.style.color = '#34d399';
+      }
+
+      // Adjustments
+      document.getElementById('pdllAdjustStatus').textContent =
+        pc.softBreached ? `${pc.adjustCount}/1${pc.adjustCount >= 1 ? ' (used)' : ' remaining'}` : '0/1';
+
+      // Cooldown
+      const cooldownEl = document.getElementById('pdllCooldown');
+      if (ti.softCooldownActive) {
+        cooldownEl.textContent = fmtCountdown(ti.softCooldownRemaining) + ' remaining';
+        cooldownEl.style.color = '#e8b95e';
+      } else if (pc.softBreached && !pc.hardBreached) {
+        cooldownEl.textContent = 'expired — trading resumed';
+        cooldownEl.style.color = '#34d399';
+      } else {
+        cooldownEl.textContent = '—';
+        cooldownEl.style.color = '';
+      }
+
+      // Show adjustment UI if: soft breached, cooldown expired, not hard breached, adjustCount < 1
+      const adjustArea = document.getElementById('pdllAdjustArea');
+      if (pc.softBreached && !ti.softCooldownActive && !pc.hardBreached && pc.adjustCount < 1) {
+        adjustArea.style.display = 'block';
+        document.getElementById('pdllNewHard').value = pc.hardLimit;
+      } else {
+        adjustArea.style.display = 'none';
+      }
+
+      // Status message
+      const statusMsg = document.getElementById('pdllStatusMsg');
+      if (pc.hardBreached) {
+        statusMsg.textContent = 'Session over. All entries blocked until next day.';
+        statusMsg.style.color = '#d11f3f';
+        statusMsg.style.borderColor = 'rgba(209,31,63,0.3)';
+        statusMsg.style.background = 'rgba(209,31,63,0.08)';
+      } else if (ti.softCooldownActive) {
+        statusMsg.textContent = `Soft breach — ${fmtCountdown(ti.softCooldownRemaining)} mandatory pause.`;
+        statusMsg.style.color = '#e8b95e';
+      } else if (pc.softBreached) {
+        statusMsg.textContent = 'Soft breach spent. Trading resumed. 1 hard adjustment available.';
+        statusMsg.style.color = '#e8b95e';
+      } else {
+        statusMsg.textContent = 'PDLL locked. Unlocks at 4:00 PM ET.';
+        statusMsg.style.color = '#e8b95e';
+      }
+
+    } else {
+      // Not locked — show setup
+      statusTag.textContent = 'NOT SET';
+      statusTag.className = 'tag unlocked';
+      setupArea.style.display = 'block';
+      lockedArea.style.display = 'none';
+
+      // Pre-fill if already set today
+      if (pc.softLimit) document.getElementById('pdllSoft').value = pc.softLimit;
+      if (pc.hardLimit) document.getElementById('pdllHard').value = pc.hardLimit;
+    }
+  });
 }
 
 function renderDailySection(dc) {
@@ -246,6 +364,62 @@ document.getElementById('btnLock').addEventListener('click', () => {
   });
 });
 
+// LOCK PDLL button
+document.getElementById('btnLockPdll').addEventListener('click', () => {
+  const soft = parseInt(document.getElementById('pdllSoft').value) || 0;
+  const hard = parseInt(document.getElementById('pdllHard').value) || 0;
+  if (soft <= 0 || hard <= 0) {
+    alert('Set both soft and hard PDLL values greater than $0.');
+    return;
+  }
+  if (hard <= soft) {
+    alert('Hard PDLL must be greater than soft PDLL.');
+    return;
+  }
+  const msg = `LOCK PDLL limits until 4:00 PM ET?\n\n` +
+    `  Soft: -$${soft} (30-min pause on breach)\n` +
+    `  Hard: -$${hard} (session over on breach)\n\n` +
+    `This cannot be undone until 4:00 PM ET.`;
+  if (!confirm(msg)) return;
+
+  const accountId = document.getElementById('accountId').value.trim() || null;
+  chrome.runtime.sendMessage({
+    type: 'set-pdll-limits',
+    softLimit: soft,
+    hardLimit: hard,
+    accountId,
+  }, res => {
+    if (!res || !res.ok) {
+      alert('Failed to set PDLL: ' + (res?.error || 'unknown'));
+      return;
+    }
+    chrome.runtime.sendMessage({ type: 'lock-pdll-limits' }, res2 => {
+      if (!res2 || !res2.ok) {
+        alert('Failed to lock PDLL: ' + (res2?.error || 'unknown'));
+        return;
+      }
+      refresh();
+    });
+  });
+});
+
+// Adjust hard PDLL (post-soft breach, one-time)
+document.getElementById('btnAdjustHard').addEventListener('click', () => {
+  const newHard = parseInt(document.getElementById('pdllNewHard').value) || 0;
+  if (newHard <= 0) {
+    alert('Enter a valid hard PDLL amount.');
+    return;
+  }
+  if (!confirm(`Adjust hard PDLL to -$${newHard}?\n\nThis is your ONE allowed adjustment. It cannot be changed again.`)) return;
+  chrome.runtime.sendMessage({ type: 'adjust-pdll-hard', newHardLimit: newHard }, res => {
+    if (!res || !res.ok) {
+      alert('Adjustment failed: ' + (res?.error || 'unknown'));
+      return;
+    }
+    refresh();
+  });
+});
+
 // Practice tier testing toggle
 document.getElementById('practiceTierToggle').addEventListener('change', (e) => {
   const enabled = e.target.checked;
@@ -288,7 +462,8 @@ async function refresh() {
   const st = await chrome.storage.local.get([
     'lockoutState', 'cadenceHeartbeat', 'eventLog',
     'tierLadder', 'tierState', 'tierLockEnabled',
-    'dailyConfig', 'activeAccount', 'accountTiers', 'practiceTierTesting'
+    'dailyConfig', 'activeAccount', 'accountTiers', 'practiceTierTesting',
+    'pdllConfig'
   ]);
   render(st);
 }
