@@ -1,4 +1,4 @@
-/* Cadence Control · Platform Content Script · v0.4.0
+/* Cadence Control · Platform Content Script · v0.5.0
  *
  * Runs on TopstepX, WealthCharts, ProjectX. Two responsibilities:
  *
@@ -406,7 +406,7 @@
   }
 
   /* ═══ Tier system boot ═══ */
-  chrome.runtime.sendMessage({ type: 'get-tier' }, res => {
+  safeSend({ type: 'get-tier' }, res => {
     if (res && res.ok) {
       tierData = { ladder: res.ladder, state: res.state, enabled: res.enabled };
     }
@@ -418,111 +418,243 @@
     }
   });
 
-  /* ═══ Risk Settings page interception (TopstepX only) ═══
-   * When user navigates to Settings → Risk Settings, overlay the entire section
-   * to prevent any changes. This catches the tilt-driven impulse to remove limits.
-   * Detection: look for URL hash/path containing 'settings' or 'risk', or DOM elements
-   * that contain risk-settings-related controls. */
-  function checkForRiskSettingsPage() {
-    if (PLATFORM !== 'topstepx') return;
-    if (!tierData.enabled) return;
+  /* ═══ Surgical Risk Settings locking (v0.5.0) ═══
+   * Instead of full-page overlay on /settings, we surgically lock ONLY specific
+   * controls while leaving everything else (Layout, Display, Hotkeys, etc.) accessible.
+   *
+   * ALWAYS LOCKED (when extension is active):
+   *   - "Symbol Contract Limits" section (entire container)
+   *   - "Lock Risk Settings for Day" button (conflicts with our enforcement model)
+   *
+   * LOCKED WHEN DAILY LIMITS ARE LOCKED:
+   *   - "Personal Daily Loss Limit (PDLL)" input + action dropdown
+   *   - "PDLL Action" dropdown
+   *   - "Personal Daily Profit Target (PDPT)" input + action dropdown
+   *   - "PDPT Action" dropdown
+   *
+   * NEVER LOCKED:
+   *   - All other Risk Settings controls (OCO Brackets, Trade Limits, Symbol Blocks, etc.)
+   *   - All other settings tabs (Copy Trading, Charts & Data, Privacy, Hotkeys, Misc, API)
+   */
 
-    // URL-based detection
-    const url = location.href.toLowerCase();
-    const hash = location.hash.toLowerCase();
-    const isRiskUrl = /risk.?settings|\/settings.*risk/i.test(url + hash);
+  const CC_LOCK_ATTR = 'data-cc-locked';
+  const CC_CHIP_CLASS = 'cc-lock-chip';
+  const CC_SECTION_OVERLAY_CLASS = 'cc-section-overlay';
 
-    // DOM-based detection: look for headings or labels mentioning risk settings / contract limits
-    let isRiskDom = false;
-    const headings = document.querySelectorAll('h1, h2, h3, h4, [class*="heading"], [class*="title"], [role="heading"]');
-    headings.forEach(el => {
-      const t = (el.textContent || '').toLowerCase();
-      if (/risk\s*settings|contract\s*limit|position\s*limit|max\s*contracts/i.test(t)) {
-        isRiskDom = true;
+  /** Find an input/select near a label with matching text */
+  function findControlNearLabel(labelText) {
+    const targets = document.querySelectorAll('label, div, span');
+    for (const el of targets) {
+      const t = (el.textContent || '').trim();
+      if (t.toLowerCase() === labelText.toLowerCase()) {
+        // Input is typically within the same parent row/field container
+        const container = el.closest('[class*="row"], [class*="field"], [class*="group"], [class*="setting"], [class*="form"], div');
+        if (container) {
+          const control = container.querySelector('input, select, [role="combobox"], [role="listbox"]');
+          if (control && control !== el) return { control, container };
+        }
+        // Try sibling approach
+        const sib = el.nextElementSibling;
+        if (sib) {
+          const sibControl = sib.matches('input, select') ? sib : sib.querySelector('input, select, [role="combobox"]');
+          if (sibControl) return { control: sibControl, container: sib.parentElement || sib };
+        }
       }
-    });
+    }
+    return null;
+  }
 
-    // Also detect settings nav items that are currently active
-    const navItems = document.querySelectorAll('[class*="active"], [aria-selected="true"], [class*="selected"]');
-    navItems.forEach(el => {
-      const t = (el.textContent || '').toLowerCase();
-      if (/risk/i.test(t)) isRiskDom = true;
-    });
+  /** Find a section container by heading text */
+  function findSectionByHeading(headingText) {
+    const candidates = document.querySelectorAll('h1, h2, h3, h4, h5, h6, [class*="heading"], [class*="title"], [role="heading"], label, span, div');
+    for (const el of candidates) {
+      const t = (el.textContent || '').trim();
+      if (t.toLowerCase().includes(headingText.toLowerCase()) && t.length < 80) {
+        // Walk up to find the section container
+        let section = el.closest('section, [class*="section"], [class*="panel"], [class*="card"], [class*="block"], [class*="group"]');
+        if (!section) section = el.parentElement;
+        return section;
+      }
+    }
+    return null;
+  }
 
-    if ((isRiskUrl || isRiskDom) && !tierOverlayEl) {
-      showTierLockOverlay();
-    } else if (!isRiskUrl && !isRiskDom && tierOverlayEl) {
-      removeTierOverlay();
+  /** Find a button by its text content */
+  function findButtonByText(text) {
+    const btns = document.querySelectorAll('button, [role="button"], a.btn, input[type="submit"]');
+    for (const btn of btns) {
+      const t = (btn.textContent || btn.value || '').trim();
+      if (t.toLowerCase().includes(text.toLowerCase())) return btn;
+    }
+    return null;
+  }
+
+  /** Apply per-control lock: disable + amber padlock chip */
+  function lockControl(control, container, reason) {
+    if (!control || control.getAttribute(CC_LOCK_ATTR)) return;
+    control.setAttribute('disabled', 'true');
+    control.setAttribute('readonly', 'true');
+    control.style.pointerEvents = 'none';
+    control.style.opacity = '0.4';
+    control.setAttribute(CC_LOCK_ATTR, reason);
+
+    // Add amber padlock chip if not already present
+    const wrap = container || control.parentElement;
+    if (wrap && !wrap.querySelector('.' + CC_CHIP_CLASS)) {
+      const chip = document.createElement('div');
+      chip.className = CC_CHIP_CLASS;
+      chip.title = reason;
+      chip.style.cssText = `
+        display:inline-flex;align-items:center;gap:3px;
+        padding:2px 8px;margin-left:6px;margin-top:2px;
+        background:rgba(232,185,94,0.15);color:#e8b95e;
+        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+        font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;
+        border-radius:3px;white-space:nowrap;
+      `;
+      chip.textContent = '\uD83D\uDD12 Locked by Cadence Control';
+      wrap.style.position = wrap.style.position || 'relative';
+      wrap.appendChild(chip);
     }
   }
 
-  function showTierLockOverlay() {
-    if (tierOverlayEl) tierOverlayEl.remove();
-    const tier = tierData.ladder[tierData.state.currentTier] || {};
-    const nextTier = tierData.ladder[tierData.state.currentTier + 1];
-    const profit = tierData.state.currentEquity && tierData.state.baselineEquity
-      ? tierData.state.currentEquity - tierData.state.baselineEquity : 0;
-    const nextAt = nextTier ? `$${nextTier.profitThreshold.toLocaleString()}` : 'max tier';
+  /** Apply section-level lock: dim container + amber banner strip */
+  function lockSection(section, reason) {
+    if (!section || section.getAttribute(CC_LOCK_ATTR)) return;
+    section.setAttribute(CC_LOCK_ATTR, reason);
+    section.style.position = section.style.position || 'relative';
+    section.style.opacity = '0.4';
+    section.style.pointerEvents = 'none';
 
-    tierOverlayEl = document.createElement('div');
-    tierOverlayEl.className = 'cc-overlay';
-    tierOverlayEl.style.background = 'rgba(5, 6, 9, 0.96)';
-    tierOverlayEl.innerHTML = `
-      <div class="cc-overlay-card" style="border-color: #e8b95e; box-shadow: 0 20px 60px rgba(232,185,94,0.3);">
-        <div style="font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#e8b95e;font-weight:700;margin-bottom:6px;">
-          CADENCE CONTROL · CONTRACT LIMITS LOCKED
-        </div>
-        <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:10px;">
-          Tier ${tierData.state.currentTier}: ${escapeHtml(tier.label || 'Unknown')}
-        </div>
-        <div style="font-size:13px;color:#9ba5bc;line-height:1.7;margin-bottom:14px;">
-          <div>MNQ: <b style="color:#fff">${tier.maxMNQ || 0}</b> · NQ: <b style="color:#fff">${tier.maxNQ || 0}</b> · ES: <b style="color:#fff">${tier.maxES || 0}</b> · MES: <b style="color:#fff">${tier.maxMES || 0}</b></div>
-          <div>YM: <b style="color:#fff">${tier.maxYM || 0}</b> · MYM: <b style="color:#fff">${tier.maxMYM || 0}</b></div>
-          <div style="margin-top:8px;color:#e8b95e;">Next unlock at ${escapeHtml(nextAt)} profit</div>
-        </div>
-        <div style="font-size:11px;color:#5c6878;line-height:1.5;">
-          Risk settings cannot be modified while Cadence Control is installed.<br>
-          This restriction exists to protect you from tilt-driven decisions.
-        </div>
-      </div>
+    // Add amber banner strip at top of section
+    const banner = document.createElement('div');
+    banner.className = CC_SECTION_OVERLAY_CLASS;
+    banner.style.cssText = `
+      position:absolute;top:0;left:0;right:0;z-index:10;
+      padding:6px 12px;
+      background:rgba(232,185,94,0.92);color:#0a0d12;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+      text-align:center;border-radius:4px 4px 0 0;
     `;
-    document.body.appendChild(tierOverlayEl);
+    banner.textContent = reason;
+    section.insertBefore(banner, section.firstChild);
 
-    // Also disable all inputs/selects/buttons within the risk settings area
-    disableRiskSettingsInputs();
-
-    chrome.runtime.sendMessage({
-      type: 'log', logType: 'tier-risk-block',
-      payload: { tier: tierData.state.currentTier, url: location.href }
+    // Also disable all interactive elements within
+    section.querySelectorAll('input, select, button, [role="combobox"], [role="button"]').forEach(el => {
+      el.setAttribute('disabled', 'true');
+      el.setAttribute(CC_LOCK_ATTR, 'section');
     });
   }
 
-  function disableRiskSettingsInputs() {
-    // Find and disable all form controls on the page that look like risk settings
-    const inputs = document.querySelectorAll('input, select, textarea, [contenteditable="true"]');
-    inputs.forEach(el => {
-      const label = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.name || '').toLowerCase();
-      const parentText = (el.parentElement?.textContent || '').toLowerCase();
-      if (/contract|position|limit|max|risk|size/i.test(label + parentText)) {
-        el.setAttribute('disabled', 'true');
-        el.setAttribute('readonly', 'true');
-        el.style.pointerEvents = 'none';
-        el.style.opacity = '0.4';
-        el.dataset.ccLocked = 'true';
-      }
-    });
+  /** Lock a button (click-block + visual) */
+  function lockButton(btn, reason) {
+    if (!btn || btn.getAttribute(CC_LOCK_ATTR)) return;
+    btn.setAttribute(CC_LOCK_ATTR, reason);
+    btn.setAttribute('disabled', 'true');
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.4';
+    btn.title = reason;
   }
 
-  function removeTierOverlay() {
-    if (tierOverlayEl) { tierOverlayEl.remove(); tierOverlayEl = null; }
-    // Re-enable any inputs we disabled
-    document.querySelectorAll('[data-cc-locked="true"]').forEach(el => {
+  /** Remove ALL surgical locks */
+  function removeAllSurgicalLocks() {
+    // Re-enable locked controls
+    document.querySelectorAll(`[${CC_LOCK_ATTR}]`).forEach(el => {
       el.removeAttribute('disabled');
       el.removeAttribute('readonly');
       el.style.pointerEvents = '';
       el.style.opacity = '';
-      delete el.dataset.ccLocked;
+      el.removeAttribute(CC_LOCK_ATTR);
+      el.title = '';
     });
+    // Remove chips and section banners
+    document.querySelectorAll(`.${CC_CHIP_CLASS}, .${CC_SECTION_OVERLAY_CLASS}`).forEach(el => el.remove());
+  }
+
+  /** Main surgical lock scan — runs periodically on /settings pages */
+  function applySurgicalSettingsLocks() {
+    if (PLATFORM !== 'topstepx') return;
+
+    // Detect if we're on a settings page
+    const isSettingsPage = /settings/i.test(location.href);
+    if (!isSettingsPage) {
+      // Not on settings — clean up any leftover locks
+      if (document.querySelector(`[${CC_LOCK_ATTR}]`)) removeAllSurgicalLocks();
+      return;
+    }
+
+    // Detect if the Risk Settings tab is currently visible/active
+    const isRiskTabActive = (() => {
+      const tabs = document.querySelectorAll('[role="tab"], [class*="tab"], a[href*="risk"], button');
+      for (const tab of tabs) {
+        const t = (tab.textContent || '').trim().toLowerCase();
+        if (/^risk\s*settings?$/i.test(t)) {
+          // Check if this tab is active
+          const isActive = tab.getAttribute('aria-selected') === 'true'
+            || tab.classList.contains('active')
+            || tab.classList.contains('selected')
+            || tab.closest('[class*="active"]') !== null;
+          return isActive;
+        }
+      }
+      // Fallback: check if Risk Settings content is visible in DOM
+      const riskHeading = findSectionByHeading('Risk Settings');
+      return !!riskHeading;
+    })();
+
+    if (!isRiskTabActive) {
+      // Non-risk tab — make sure nothing is locked
+      if (document.querySelector(`[${CC_LOCK_ATTR}]`)) removeAllSurgicalLocks();
+      return;
+    }
+
+    // === ALWAYS LOCKED (when extension is active on Risk Settings tab) ===
+
+    // 1. Contract Limits section — entire section container
+    const contractSection = findSectionByHeading('Symbol Contract Limits') || findSectionByHeading('Contract Limits');
+    if (contractSection) {
+      lockSection(contractSection, 'Contract limits managed by Cadence Control. Next unlock at 4:00 PM ET.');
+    }
+
+    // 2. "Lock Risk Settings for Day" button — conflicts with our model
+    const lockRiskBtn = findButtonByText('Lock Risk Settings for Day') || findButtonByText('Lock Risk Settings');
+    if (lockRiskBtn) {
+      lockButton(lockRiskBtn, 'Blocked by Cadence Control — use the extension popup to lock limits.');
+    }
+
+    // === LOCKED WHEN DAILY LIMITS ARE LOCKED ===
+    const isDailyLocked = dailyConfig && dailyConfig.lockedAt && !dailyConfig.unlockedAt;
+
+    if (isDailyLocked) {
+      const pdllLabels = [
+        'Personal Daily Loss Limit (PDLL)',
+        'PDLL Action',
+        'Personal Daily Profit Target (PDPT)',
+        'PDPT Action',
+      ];
+      for (const label of pdllLabels) {
+        const found = findControlNearLabel(label);
+        if (found) {
+          lockControl(found.control, found.container, 'Unlocks 4:00 PM ET');
+        }
+      }
+    }
+
+    // Log first detection
+    if (!tierOverlayEl) {
+      tierOverlayEl = true; // reuse flag to track that we've logged
+      safeSend({
+        type: 'log', logType: 'surgical-risk-lock',
+        payload: { contractSection: !!contractSection, lockBtn: !!lockRiskBtn, dailyLocked: isDailyLocked }
+      });
+    }
+  }
+
+  /** Remove tier overlay is now just removing surgical locks */
+  function removeTierOverlay() {
+    removeAllSurgicalLocks();
+    tierOverlayEl = null;
   }
 
   /* ═══ Equity scraping (TopstepX) ═══
@@ -574,12 +706,46 @@
     }
   }
 
+  /* ═══ Realized P&L scraping (v0.5.0 — PDLL enforcement) ═══
+   * Reads RP&L from TopstepX account bar header. Format: "RP&L: $123.45" or "RP&L: -$123.45"
+   * Polls every 5-10 seconds and reports to background for threshold checking. */
+  function scrapeRealizedPnl() {
+    if (PLATFORM !== 'topstepx') return;
+    const els = document.querySelectorAll('div, span');
+    for (const el of els) {
+      const t = (el.textContent || '').trim();
+      // Match "RP&L: $123.45" or "RP&L: -$123.45" or "RP&L: ($123.45)"
+      const m = t.match(/^RP&L:\s*(-?)\$?([\d,]+\.?\d*)/);
+      if (m) {
+        const neg = m[1] === '-';
+        const val = parseFloat(m[2].replace(/,/g, ''));
+        if (!isNaN(val)) {
+          const rpnl = neg ? -val : val;
+          safeSend({ type: 'rpnl-update', rpnl });
+          return;
+        }
+      }
+      // Also match parenthetical negative: "RP&L: ($123.45)"
+      const m2 = t.match(/^RP&L:\s*\(\$?([\d,]+\.?\d*)\)/);
+      if (m2) {
+        const val = parseFloat(m2[1].replace(/,/g, ''));
+        if (!isNaN(val)) {
+          safeSend({ type: 'rpnl-update', rpnl: -val });
+          return;
+        }
+      }
+    }
+  }
+
   /* ═══ Periodic checks ═══ */
-  // Risk settings detection — check every 2s for SPA navigation
-  setInterval(checkForRiskSettingsPage, 2000);
+  // Surgical settings locks — check every 2s for SPA navigation
+  setInterval(applySurgicalSettingsLocks, 2000);
   // Equity scraping — every 15s
   setInterval(scrapeEquity, 15000);
   setTimeout(scrapeEquity, 3000); // initial
+  // RP&L scraping for PDLL enforcement — every 7s
+  setInterval(scrapeRealizedPnl, 7000);
+  setTimeout(scrapeRealizedPnl, 4000); // initial (stagger from equity)
 
   /* ═══ Start discovery ═══ */
   // Run discovery once on load, then every 10s for 60s (SPA re-renders)
