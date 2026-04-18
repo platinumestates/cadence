@@ -496,7 +496,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.11.8 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.9 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -765,6 +765,10 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
           <label class="sw"><input type="checkbox" id="setDemoMode"><span class="sw-t"></span><span>Demo mode (simulated HR stream)</span></label>
           <div class="fld-h">Generates a realistic HR stream without a sensor — useful for testing tiers. Click "Connect sensor" after enabling to start the simulator.</div>
         </div>
+        <div class="fld">
+          <label class="sw"><input type="checkbox" id="setRecordOffHours"><span class="sw-t"></span><span>Record off-hours sessions (testing)</span></label>
+          <div class="fld-h">By default, session recording is paused Friday 4:00 PM → Sunday 5:30 PM ET. Enable this to record sessions outside market hours, e.g. for testing. Disable it again before Monday so weekend connects don't clutter your Firestore data.</div>
+        </div>
       </div>
 
       <div class="sec">
@@ -1029,6 +1033,7 @@ const DEFAULTS = {
   cooldownSec: 90,
   demoMode: false,
   skipHelp: false,
+  recordOffHours: false,    // v0.11.9 · allow session recording outside Sun 5:30 PM → Fri 4 PM ET window (testing)
   hrSource: 'bluetooth',    // 'bluetooth' | 'pulsoid'
   pulsoidToken: '',         // stored locally only, never sent anywhere except Pulsoid's own endpoint
   customAudio: {},          // { [slotId]: {data,name,size,type,uploadedAt} }  — user-uploaded audio, overrides bundled
@@ -2589,21 +2594,23 @@ function recoverPendingSession(){
 function startSession(){
   if(!S.connected) return;          // guard: only start if sensor live
   if(S.sessionId) return;           // already in a session
-  if(!isMarketHours()){
-    console.log('[Cadence] Off-hours — session not recorded (Fri 4:00 PM → Sun 5:30 PM ET)');
+  const marketOpen = isMarketHours();
+  const override = !!S.settings.recordOffHours;
+  if(!marketOpen && !override){
+    console.log('[Cadence] Off-hours — session not recorded (Fri 4:00 PM → Sun 5:30 PM ET). Settings → "Record off-hours sessions" to override.');
     renderOffHoursBanner(true);
     return;
   }
   const startMs = Date.now();
   S.sessionId = 'sess_' + startMs;
   S.sessionStartMs = startMs;
-  S.preCheckin = null;              // populated when user saves pre-session check-in
-  S.tierEvents = [];                // populated by logTierEvent() from tickAcute/tickChronic
-  S.sessionBuckets = [];            // populated by recordSessionBucket() every 10s
+  S.preCheckin = null;
+  S.tierEvents = [];
+  S.sessionBuckets = [];
   S.bucketAccum = null;
-  console.log('[Cadence] Session started:', S.sessionId);
+  console.log('[Cadence] Session started:', S.sessionId,
+    marketOpen ? '' : '(OFF-HOURS override active — disable in Settings when done testing)');
   renderOffHoursBanner(false);
-  // v0.11.7 · Phase 1b: open pre-session check-in (dismissible)
   openPreCheckin();
 }
 
@@ -2621,8 +2628,9 @@ function renderOffHoursBanner(show){
   b.id = 'offHoursBanner';
   b.className = 'banner info';
   b.innerHTML = '<div class="banner-ic">i</div>'
-    + '<div class="banner-body"><strong>Off-hours — connected for monitoring only.</strong>'
-    + '<em>Session recording resumes Sunday 5:30 PM ET. Live BPM and tier alerts still active.</em></div>'
+    + '<div class="banner-body"><strong>Off-hours — connected for monitoring only, not recording.</strong>'
+    + '<em>Session recording resumes Sunday 5:30 PM ET. Live BPM and tier alerts still active. '
+    + 'To record sessions now (e.g. for testing), enable <strong>Settings → Record off-hours sessions</strong>, disconnect, then reconnect.</em></div>'
     + '<button class="banner-close" aria-label="Dismiss">&times;</button>';
   b.querySelector('.banner-close').addEventListener('click', () => b.remove());
   bw.appendChild(b);
@@ -2858,6 +2866,7 @@ function openSettings(){
   $('setChronic').value  = S.settings.chronicBpm;
   $('setCooldown').value = S.settings.cooldownSec; $('setCdVal').textContent = S.settings.cooldownSec;
   $('setDemoMode').checked = S.settings.demoMode;
+  $('setRecordOffHours').checked = !!S.settings.recordOffHours;
   $('setEntryPing').checked = S.settings.entryPingEnabled;
   $('setScheduledEn').checked = S.settings.scheduledEnabled !== false;
   document.querySelectorAll('[data-engine]').forEach(b => b.classList.toggle('on', b.dataset.engine === S.settings.voiceEngine));
@@ -3066,6 +3075,7 @@ function saveSettingsFromUI(){
   S.settings.chronicBpm   = parseInt($('setChronic').value, 10)  || DEFAULTS.chronicBpm;
   S.settings.cooldownSec  = parseInt($('setCooldown').value, 10) || DEFAULTS.cooldownSec;
   S.settings.demoMode     = $('setDemoMode').checked;
+  S.settings.recordOffHours = $('setRecordOffHours').checked;
   S.settings.entryPingEnabled = $('setEntryPing').checked;
   S.settings.scheduledEnabled = $('setScheduledEn').checked;
   S.settings.pulsoidToken = ($('setPulsoidToken').value || '').trim();
