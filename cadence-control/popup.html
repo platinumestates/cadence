@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cadence Control</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --bg2: #121822;
+    --bd: #1f2937;
+    --tx: #e6e7eb;
+    --tx2: #8899ab;
+    --tx3: #5c6878;
+    --t0: #42e5e5;
+    --warn: #e8b95e;
+    --crit: #d11f3f;
+    --green: #34d399;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 18px;
+    width: 370px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--tx);
+  }
+  h1 {
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--t0); margin: 0 0 12px;
+  }
+  .section { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--bd); }
+  .section:last-child { border-bottom: none; padding-bottom: 0; }
+  .lbl { font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--tx3); font-weight: 600; margin-bottom: 4px; }
+  .val { font-size: 13px; color: var(--tx); font-weight: 500; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .tag {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700;
+  }
+  .tag.none { background: rgba(122, 163, 227, 0.15); color: #7aa3e3; }
+  .tag.active { background: rgba(209, 31, 63, 0.2); color: var(--crit); }
+  .tag.warn { background: rgba(232, 185, 94, 0.15); color: var(--warn); }
+  .tag.locked { background: rgba(209, 31, 63, 0.25); color: var(--crit); }
+  .tag.unlocked { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .tag.review { background: rgba(232, 185, 94, 0.2); color: var(--warn); }
+  .kv { display: grid; grid-template-columns: 100px 1fr; gap: 6px; font-size: 12px; margin-bottom: 6px; }
+  .kv .k { color: var(--tx3); }
+  .kv .v { color: var(--tx); font-weight: 500; }
+  .log {
+    max-height: 120px; overflow-y: auto;
+    background: var(--bg2); border: 1px solid var(--bd); border-radius: 6px;
+    padding: 8px; font-size: 10.5px; font-family: ui-monospace, monospace;
+    color: var(--tx2);
+  }
+  .log-row { margin-bottom: 3px; }
+  .log-row .t { color: var(--tx3); margin-right: 6px; }
+  button {
+    background: var(--bg2); color: var(--tx); border: 1px solid var(--bd);
+    padding: 7px 14px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  button:hover { border-color: var(--t0); color: var(--t0); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button:disabled:hover { border-color: var(--bd); color: var(--tx); }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Daily setup form */
+  .daily-form { margin-top: 8px; }
+  .daily-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px; margin-bottom: 10px;
+  }
+  .daily-field label {
+    display: block; font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--tx3); font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .daily-field input {
+    width: 100%; padding: 5px 7px;
+    background: var(--bg2); color: var(--tx); border: 1px solid var(--bd);
+    border-radius: 4px; font-family: ui-monospace, monospace;
+    font-size: 13px; font-weight: 600; text-align: center;
+  }
+  .daily-field input:focus { outline: none; border-color: var(--t0); }
+  .daily-field input:disabled { opacity: 0.35; }
+
+  .lock-btn {
+    width: 100%; padding: 10px;
+    background: var(--crit); color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .lock-btn:hover { background: #b91a34; }
+  .lock-btn:disabled { background: var(--bg2); color: var(--tx3); cursor: not-allowed; }
+
+  .lock-status {
+    text-align: center; padding: 10px;
+    background: rgba(209, 31, 63, 0.08);
+    border: 1px solid rgba(209, 31, 63, 0.3);
+    border-radius: 6px; margin-top: 6px;
+    font-size: 11px; color: var(--crit); font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .lock-status.review-mode {
+    background: rgba(232, 185, 94, 0.08);
+    border-color: rgba(232, 185, 94, 0.3);
+    color: var(--warn);
+  }
+
+  .delete-window-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+    margin-top: 4px;
+  }
+  .delete-window-badge.open { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .delete-window-badge.closed { background: rgba(209, 31, 63, 0.15); color: var(--crit); }
+
+  .account-row {
+    display: flex; gap: 6px; align-items: center; margin-top: 8px;
+  }
+  .account-row input {
+    flex: 1; padding: 5px 7px;
+    background: var(--bg2); color: var(--tx); border: 1px solid var(--bd);
+    border-radius: 4px; font-family: ui-monospace, monospace; font-size: 11px;
+  }
+  .account-row input:focus { outline: none; border-color: var(--t0); }
+</style>
+</head>
+<body>
+
+<h1>◐ Cadence Control</h1>
+
+<!-- PDLL limits section -->
+<div class="section">
+  <div class="lbl">PDLL limits</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <span class="tag none" id="pdllStatusTag">NOT SET</span>
+    <span class="mono" style="font-size:10px;color:var(--tx3)" id="pdllRPnL"></span>
+  </div>
+
+  <div id="pdllSetupArea">
+    <div class="daily-form">
+      <div class="daily-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="daily-field"><label>Soft ($)</label><input type="number" id="pdllSoft" min="0" max="99999" value="500"></div>
+        <div class="daily-field"><label>Hard ($)</label><input type="number" id="pdllHard" min="0" max="99999" value="1500"></div>
+      </div>
+      <button class="lock-btn" id="btnLockPdll" style="background:var(--warn);color:#0a0d12;">LOCK PDLL UNTIL 4:00 PM ET</button>
+    </div>
+  </div>
+
+  <div id="pdllLockedArea" style="display:none;">
+    <div class="lock-status" id="pdllStatusMsg" style="background:rgba(232,185,94,0.08);border-color:rgba(232,185,94,0.3);color:var(--warn);">
+      PDLL locked.
+    </div>
+    <div style="margin-top:8px;">
+      <div class="kv"><div class="k">Soft limit</div><div class="v mono" id="pdllLockedSoft">—</div></div>
+      <div class="kv"><div class="k">Hard limit</div><div class="v mono" id="pdllLockedHard">—</div></div>
+      <div class="kv"><div class="k">Soft breach</div><div class="v" id="pdllSoftStatus">armed</div></div>
+      <div class="kv"><div class="k">Hard breach</div><div class="v" id="pdllHardStatus">armed</div></div>
+      <div class="kv"><div class="k">Adjustments</div><div class="v" id="pdllAdjustStatus">0/1</div></div>
+      <div class="kv"><div class="k">Cooldown</div><div class="v" id="pdllCooldown">—</div></div>
+    </div>
+    <!-- Post-soft adjustment UI -->
+    <div id="pdllAdjustArea" style="display:none;margin-top:8px;">
+      <div style="font-size:10px;color:var(--warn);margin-bottom:4px;">Adjust hard PDLL (1 time only):</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="number" id="pdllNewHard" min="0" max="99999" style="width:80px;padding:4px 6px;background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:4px;font-family:ui-monospace,monospace;font-size:12px;text-align:center;">
+        <button id="btnAdjustHard" style="font-size:10px;padding:5px 10px;">Adjust</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily limits section -->
+<div class="section">
+  <div class="lbl">Daily contract limits</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+    <span class="tag none" id="dailyStatusTag">NOT SET</span>
+    <span class="mono" style="font-size:10px;color:var(--tx3)" id="dailyTimeET"></span>
+  </div>
+
+  <div id="dailySetupArea">
+    <div class="daily-form">
+      <div class="daily-grid">
+        <div class="daily-field"><label>MNQ</label><input type="number" id="dMNQ" min="0" max="99" value="10"></div>
+        <div class="daily-field"><label>NQ</label><input type="number" id="dNQ" min="0" max="20" value="0"></div>
+        <div class="daily-field"><label>ES</label><input type="number" id="dES" min="0" max="10" value="0"></div>
+        <div class="daily-field"><label>MES</label><input type="number" id="dMES" min="0" max="30" value="0"></div>
+        <div class="daily-field"><label>YM</label><input type="number" id="dYM" min="0" max="10" value="0"></div>
+        <div class="daily-field"><label>MYM</label><input type="number" id="dMYM" min="0" max="30" value="0"></div>
+      </div>
+      <button class="lock-btn" id="btnLock">LOCK LIMITS UNTIL 4:00 PM ET</button>
+    </div>
+  </div>
+
+  <div id="dailyLockedArea" style="display:none;">
+    <div class="lock-status" id="lockStatusMsg">
+      Limits locked. Unlocks at 4:00 PM ET.
+    </div>
+    <div style="margin-top:8px;">
+      <div class="kv"><div class="k">MNQ</div><div class="v mono" id="lockedMNQ">—</div></div>
+      <div class="kv"><div class="k">NQ</div><div class="v mono" id="lockedNQ">—</div></div>
+      <div class="kv"><div class="k">ES</div><div class="v mono" id="lockedES">—</div></div>
+      <div class="kv"><div class="k">MES</div><div class="v mono" id="lockedMES">—</div></div>
+      <div class="kv"><div class="k">YM</div><div class="v mono" id="lockedYM">—</div></div>
+      <div class="kv"><div class="k">MYM</div><div class="v mono" id="lockedMYM">—</div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:6px">
+    <span class="delete-window-badge closed" id="deleteWindowBadge">EXTENSION LOCKED</span>
+  </div>
+</div>
+
+<!-- Account -->
+<div class="section">
+  <div class="lbl">Account</div>
+  <div class="account-row">
+    <input type="text" id="accountId" placeholder="e.g. TOPX5394">
+    <button id="btnResetBaseline" style="font-size:10px;padding:5px 10px;">Reset baseline</button>
+  </div>
+</div>
+
+<!-- Lockout state -->
+<div class="section">
+  <div class="lbl">Lockout state</div>
+  <div class="val"><span class="tag none" id="lockoutTag">NONE</span></div>
+  <div class="kv" style="margin-top:8px"><div class="k">Reason</div><div class="v" id="lockoutReason">—</div></div>
+  <div class="kv"><div class="k">Market orders</div><div class="v" id="blockMarket">allowed</div></div>
+  <div class="kv"><div class="k">New entries</div><div class="v" id="blockEntries">allowed</div></div>
+  <div class="kv"><div class="k">SL widening</div><div class="v" id="blockSl">blocked</div></div>
+</div>
+
+<!-- Contract tier -->
+<div class="section">
+  <div class="lbl">Profit tier (auto)</div>
+  <div class="kv"><div class="k">Active account</div><div class="v" id="activeAcctLabel" style="font-size:10px;">—</div></div>
+  <div class="kv"><div class="k">Current tier</div><div class="v" id="tierLabel">—</div></div>
+  <div class="kv"><div class="k">Profit</div><div class="v mono" id="tierProfit">—</div></div>
+  <div class="kv"><div class="k">Next unlock</div><div class="v" id="tierNext">—</div></div>
+  <div class="kv"><div class="k">Tier limits</div><div class="v mono" id="tierLimits" style="font-size:10px;">—</div></div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+    <input type="checkbox" id="practiceTierToggle" style="accent-color:var(--warn);">
+    <label for="practiceTierToggle" style="font-size:10px;color:var(--tx3);cursor:pointer;">
+      Practice tier testing (OFF = practice stays T0)
+    </label>
+  </div>
+</div>
+
+<!-- Cadence heartbeat -->
+<div class="section">
+  <div class="lbl">Cadence heartbeat</div>
+  <div class="kv"><div class="k">BPM</div><div class="v mono" id="hbBpm">—</div></div>
+  <div class="kv"><div class="k">Tier</div><div class="v" id="hbTier">—</div></div>
+  <div class="kv"><div class="k">Source</div><div class="v" id="hbSource">—</div></div>
+  <div class="kv"><div class="k">Last seen</div><div class="v" id="hbAge">—</div></div>
+</div>
+
+<!-- Event log -->
+<div class="section">
+  <div class="lbl">Recent events</div>
+  <div class="log" id="eventLog">Loading…</div>
+</div>
+
+<div class="actions">
+  <button id="btnRefresh">Refresh</button>
+  <button id="btnClearLog">Clear log</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
