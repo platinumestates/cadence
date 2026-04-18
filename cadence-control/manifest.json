@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "Cadence Control",
+  "version": "0.4.1",
+  "description": "Enforcement layer for Cadence HRM — confirmed TopstepX selectors, per-account tier state, practice guard, daily locks, deletion watchdog.",
+
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "notifications",
+    "alarms"
+  ],
+
+  "host_permissions": [
+    "https://*.topstepx.com/*",
+    "https://*.wealthcharts.com/*",
+    "https://*.projectx.com/*",
+    "https://cadence-umber.vercel.app/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.topstepx.com/*",
+        "https://*.wealthcharts.com/*",
+        "https://*.projectx.com/*"
+      ],
+      "js": ["content-platform.js"],
+      "css": ["content-platform.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://cadence-umber.vercel.app/*"],
+      "js": ["content-cadence.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Cadence Control",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
