@@ -159,11 +159,10 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 .demo-on-btn:hover{background:#f5c863;transform:scale(1.04)}
 @keyframes demoPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,185,94,.55)}50%{box-shadow:0 0 0 10px rgba(232,185,94,0)}}
 
-/* v0.11 · Reset button on dashboard for ad-hoc breath pacer launch */
-.reset-fab{position:fixed;bottom:18px;left:18px;z-index:40;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);padding:9px 14px;font-family:var(--f-body);font-weight:600;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;border-radius:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);display:flex;align-items:center;gap:8px;transition:all .2s}
-.reset-fab:hover{color:var(--t0);border-color:var(--t0);background:var(--bg1)}
-.reset-fab .ic{font-size:13px}
-body.widget .reset-fab{display:none}
+/* v0.11.1 · Reset button in top bar — prominent, teal, glows subtly so it's never hidden */
+.reset-tb-btn{background:var(--t0-bg);color:var(--t0);border:1.5px solid var(--t0);padding:7px 14px;font-family:var(--f-body);font-weight:700;font-size:11.5px;border-radius:7px;cursor:pointer;letter-spacing:1.3px;text-transform:uppercase;transition:all .18s;margin-right:4px;box-shadow:0 0 14px rgba(66,229,229,.12)}
+.reset-tb-btn:hover{background:var(--t0);color:#001b1f;transform:scale(1.04);box-shadow:0 0 20px rgba(66,229,229,.4)}
+body.widget .reset-tb-btn{display:none}
 
 /* v0.11 · Breath pacer modal — full-screen, immersive */
 .pacer-bg{position:fixed;inset:0;background:radial-gradient(ellipse at center,#051520 0%,#020810 60%,#000 100%);z-index:3000;display:none;align-items:center;justify-content:center;flex-direction:column}
@@ -362,13 +361,15 @@ body.widget .reset-fab{display:none}
 .morning-card.pending{border-color:rgba(217,168,92,.3);background:linear-gradient(180deg,rgba(217,168,92,.05),rgba(217,168,92,.015))}
 .morning-card.pending::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--t1);box-shadow:0 0 12px var(--t1)}
 .morning-card.complete::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--t0);opacity:.6}
-.morning-top{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:flex-start}
+.morning-top{display:block}
 .morning-ti{font-family:var(--f-head);font-size:14px;font-style:italic;font-weight:600;color:var(--tx);letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
 .morning-ti .kind{font-style:normal;font-family:var(--f-body);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);font-weight:600}
-.morning-state{font-size:11px;color:var(--tx2);margin-top:4px;line-height:1.45;font-family:var(--f-body)}
+.morning-state{font-size:11.5px;color:var(--tx2);margin-top:4px;line-height:1.45;font-family:var(--f-body)}
 .morning-state strong{color:var(--tx);font-weight:600}
 .morning-state .flag-reduced{color:var(--t2);font-weight:600}
-.morning-btn{background:var(--t1);color:#191510;border:none;padding:9px 16px;font-family:var(--f-body);font-weight:600;font-size:12px;border-radius:8px;cursor:pointer;white-space:nowrap;letter-spacing:.2px;transition:all .15s}
+/* v0.11.1 · Buttons on their own row below title — cannot be clipped by horizontal squeeze */
+.morning-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.morning-btn{background:var(--t1);color:#191510;border:none;padding:11px 24px;font-family:var(--f-body);font-weight:700;font-size:13px;border-radius:8px;cursor:pointer;white-space:nowrap;letter-spacing:.3px;transition:all .15s;box-shadow:0 3px 10px rgba(217,168,92,.2)}
 .morning-btn:hover{background:#eabb69;transform:translateY(-1px)}
 .morning-btn:disabled{background:var(--bg4);color:var(--tx3);cursor:not-allowed;transform:none}
 .morning-btn.ghost{background:transparent;border:1px solid var(--bd2);color:var(--tx2);font-weight:500}
@@ -490,7 +491,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.11.0 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.11.1 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -500,6 +501,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
     <div class="tb-r">
       <button class="demo-on-btn" id="demoOnBtn" style="display:none" title="Demo mode is active — simulated HR, not your sensor. Click to turn off.">⚠ DEMO ON</button>
+      <button class="reset-tb-btn" id="resetTbBtn" title="Open a paced breathing session · works any time">◐ Reset</button>
       <div class="seg" id="viewSeg">
         <button class="seg-b on" data-view="dash">Dashboard</button>
         <button class="seg-b" data-view="widget" title="Open a detached widget window you can drag and pin on top">Pop Out</button>
@@ -520,14 +522,12 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <!-- v0.10 · Morning Reading card (prominent when today pending) -->
   <div class="morning-card not-widget" id="morningCard" style="display:none">
     <div class="morning-top">
-      <div>
-        <div class="morning-ti"><span id="morningTi">Morning Reading</span><span class="kind">2-MIN · BASELINE</span></div>
-        <div class="morning-state" id="morningState">—</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:flex-start">
-        <button class="morning-btn ghost" id="morningHist" title="View reading history" style="display:none">History</button>
-        <button class="morning-btn" id="morningStart">Start reading</button>
-      </div>
+      <div class="morning-ti"><span id="morningTi">Morning Reading</span><span class="kind">2-MIN · BASELINE</span></div>
+      <div class="morning-state" id="morningState">—</div>
+    </div>
+    <div class="morning-actions">
+      <button class="morning-btn ghost" id="morningHist" title="View reading history" style="display:none">History</button>
+      <button class="morning-btn" id="morningStart">Start reading</button>
     </div>
     <div class="morning-baseline" id="morningBaseline" style="display:none">
       <div class="mb-cell"><div class="mb-lbl">7-day</div><div class="mb-v" id="mb7">—</div><div class="mb-sub" id="mb7n"></div></div>
@@ -817,7 +817,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.11.0 — HRM Trading Companion
+   CADENCE v0.11.1 — HRM Trading Companion
    v0.9:   detached popout widget via window.open + BroadcastChannel
    v0.9.1: stacked layout, heartbeat pulse on elevated
    v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220
@@ -3150,7 +3150,7 @@ function stopPacer(goToDone){
 }
 
 function wirePacer(){
-  const fab = document.getElementById('resetFab');
+  const fab = document.getElementById('resetTbBtn');
   if(fab) fab.addEventListener('click', openPacer);
   const close = document.getElementById('pacerClose');
   if(close) close.addEventListener('click', closePacer);
@@ -3307,8 +3307,7 @@ else init();
 </div>
 
 
-<!-- ═══════════════ v0.11 RESET / BREATH PACER FLOATING BUTTON ═══════════════ -->
-<button class="reset-fab not-widget" id="resetFab" title="Open a 3- or 5-minute paced breathing session"><span class="ic">◐</span><span>Reset</span></button>
+<!-- v0.11.1 · Reset button moved to top bar (see .reset-tb-btn) -->
 
 <!-- ═══════════════ v0.11 BREATH PACER MODAL ═══════════════ -->
 <div class="pacer-bg" id="pacerModal">
