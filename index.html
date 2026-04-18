@@ -48,9 +48,9 @@ try {
   --bd:rgba(255,255,255,.055);
   --bd2:rgba(255,255,255,.11);
   --bd3:rgba(255,255,255,.22);
-  --tx:#f5f4ef;
-  --tx2:#c4c1b6;
-  --tx3:#8e8b82;
+  --tx:#ecebe5;
+  --tx2:#9e9b90;
+  --tx3:#605d55;
 
   /* Tier/band palette — v0.7 brightened for dark-mode legibility.
      t0 cyan (0-75 baseline) · t1 green (76-89) · t2 yellow (90-99)
@@ -301,6 +301,61 @@ body{color:var(--tx);font-family:var(--f-body);font-size:13px;display:flex;flex-
 .sw input:checked + .sw-t{background:var(--t0)}
 .sw input:checked + .sw-t::after{left:16px;background:var(--bg1)}
 
+
+/* ═══ v0.10 · MORNING READING CARD + MODAL ═══ */
+.morning-card{background:linear-gradient(180deg,rgba(66,229,229,.04),rgba(66,229,229,.01));border:1px solid var(--bd);border-radius:var(--r2);padding:16px 18px;margin-bottom:14px;position:relative;overflow:hidden}
+.morning-card.pending{border-color:rgba(217,168,92,.3);background:linear-gradient(180deg,rgba(217,168,92,.05),rgba(217,168,92,.015))}
+.morning-card.pending::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--t1);box-shadow:0 0 12px var(--t1)}
+.morning-card.complete::after{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--t0);opacity:.6}
+.morning-top{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:flex-start}
+.morning-ti{font-family:var(--f-head);font-size:14px;font-style:italic;font-weight:600;color:var(--tx);letter-spacing:-.2px;display:flex;align-items:center;gap:9px}
+.morning-ti .kind{font-style:normal;font-family:var(--f-body);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.morning-state{font-size:11px;color:var(--tx2);margin-top:4px;line-height:1.45;font-family:var(--f-body)}
+.morning-state strong{color:var(--tx);font-weight:600}
+.morning-state .flag-reduced{color:var(--t2);font-weight:600}
+.morning-btn{background:var(--t1);color:#191510;border:none;padding:9px 16px;font-family:var(--f-body);font-weight:600;font-size:12px;border-radius:8px;cursor:pointer;white-space:nowrap;letter-spacing:.2px;transition:all .15s}
+.morning-btn:hover{background:#eabb69;transform:translateY(-1px)}
+.morning-btn:disabled{background:var(--bg4);color:var(--tx3);cursor:not-allowed;transform:none}
+.morning-btn.ghost{background:transparent;border:1px solid var(--bd2);color:var(--tx2);font-weight:500}
+.morning-btn.ghost:hover{color:var(--tx);border-color:var(--bd3);background:var(--bg3);transform:none}
+
+.morning-baseline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)}
+.mb-cell{display:flex;flex-direction:column;gap:3px}
+.mb-lbl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.mb-v{font-family:var(--f-mono);font-size:19px;font-weight:500;color:var(--tx);font-variant-numeric:tabular-nums}
+.mb-v.dim{color:var(--tx3);font-size:15px;font-style:italic;font-weight:400;font-family:var(--f-head)}
+.mb-sub{font-size:10px;color:var(--tx3);font-family:var(--f-body)}
+
+.morning-calib{margin-top:10px;padding:8px 12px;background:var(--bg3);border-radius:7px;font-size:10.5px;color:var(--tx2);font-family:var(--f-body);display:flex;align-items:center;gap:8px}
+.morning-calib .bar{flex:1;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.morning-calib .bar-fill{height:100%;background:var(--t0);transition:width .4s ease}
+
+/* Reading capture modal */
+.reading-hero{text-align:center;padding:12px 0 22px}
+.reading-phase{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);font-weight:600;margin-bottom:6px}
+.reading-bpm{font-family:var(--f-mono);font-size:84px;font-weight:700;line-height:1;color:var(--tx);font-variant-numeric:tabular-nums;margin-bottom:4px}
+.reading-bpm.stale{opacity:.4}
+.reading-bpm.c-1{color:var(--t1)}
+.reading-bpm.c-2{color:var(--t2)}
+.reading-bpm.c-3,.reading-bpm.c-4,.reading-bpm.c-5{color:var(--t3)}
+.reading-sub{font-size:11px;color:var(--tx2);font-family:var(--f-body);letter-spacing:.2px}
+.reading-countdown{font-family:var(--f-mono);font-size:36px;font-weight:400;color:var(--tx);font-variant-numeric:tabular-nums;margin-top:18px;letter-spacing:-1px}
+.reading-progress{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:14px}
+.reading-progress-fill{height:100%;width:0%;background:var(--t0);transition:width 1s linear}
+.reading-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
+.reading-stat{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:center}
+.reading-stat .lbl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--tx3);font-weight:600;margin-bottom:4px}
+.reading-stat .v{font-family:var(--f-mono);font-size:18px;font-weight:500;color:var(--tx);font-variant-numeric:tabular-nums}
+.reading-instr{background:var(--bg3);border-radius:8px;padding:13px 16px;font-size:12px;color:var(--tx);line-height:1.55;font-family:var(--f-body)}
+.reading-instr strong{color:var(--tx);font-weight:600}
+.reading-instr em{color:var(--tx2);font-style:normal;font-size:11px;display:block;margin-top:6px}
+.reading-summary{text-align:center;padding:20px 0}
+.reading-summary .rs-main{font-family:var(--f-mono);font-size:56px;font-weight:700;color:var(--tx);margin-bottom:6px;font-variant-numeric:tabular-nums}
+.reading-summary .rs-u{font-size:14px;color:var(--tx2);font-family:var(--f-head);font-style:italic;margin-left:6px}
+.reading-summary .rs-sub{font-size:12.5px;color:var(--tx2);font-family:var(--f-body);line-height:1.5}
+.reading-summary .rs-flag{display:inline-block;margin-top:10px;padding:5px 11px;background:var(--t2-bg);color:var(--t2);border:1px solid rgba(230,138,70,.35);border-radius:5px;font-size:11px;font-weight:600;letter-spacing:.3px}
+.reading-summary .rs-flag.ok{background:var(--t0-bg);color:var(--t0);border-color:rgba(66,229,229,.4)}
+
 /* ── WIDGET MODE ── */
 body.widget{background:transparent;overflow:hidden}
 body.widget .tb,body.widget .main .not-widget{display:none!important}
@@ -380,7 +435,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.9.6 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.10.0 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -406,6 +461,30 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
   <!-- Banners (prior to connect) -->
   <div id="banners" class="not-widget"></div>
+  <!-- v0.10 · Morning Reading card (prominent when today pending) -->
+  <div class="morning-card not-widget" id="morningCard" style="display:none">
+    <div class="morning-top">
+      <div>
+        <div class="morning-ti"><span id="morningTi">Morning Reading</span><span class="kind">2-MIN · BASELINE</span></div>
+        <div class="morning-state" id="morningState">—</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <button class="morning-btn ghost" id="morningHist" title="View reading history" style="display:none">History</button>
+        <button class="morning-btn" id="morningStart">Start reading</button>
+      </div>
+    </div>
+    <div class="morning-baseline" id="morningBaseline" style="display:none">
+      <div class="mb-cell"><div class="mb-lbl">7-day</div><div class="mb-v" id="mb7">—</div><div class="mb-sub" id="mb7n"></div></div>
+      <div class="mb-cell"><div class="mb-lbl">14-day</div><div class="mb-v" id="mb14">—</div><div class="mb-sub" id="mb14n"></div></div>
+      <div class="mb-cell"><div class="mb-lbl">30-day</div><div class="mb-v" id="mb30">—</div><div class="mb-sub" id="mb30n"></div></div>
+      <div class="mb-cell"><div class="mb-lbl">90-day</div><div class="mb-v" id="mb90">—</div><div class="mb-sub" id="mb90n"></div></div>
+    </div>
+    <div class="morning-calib" id="morningCalib" style="display:none">
+      <span id="morningCalibTxt">—</span>
+      <div class="bar"><div class="bar-fill" id="morningCalibBar"></div></div>
+    </div>
+  </div>
+
 
   <!-- Hero row: big BPM + session stats -->
   <div class="hero not-widget">
@@ -682,14 +761,15 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.9.6 — HRM Trading Companion
+   CADENCE v0.10.0 — HRM Trading Companion
    v0.9:   detached popout widget via window.open + BroadcastChannel
    v0.9.1: stacked layout, heartbeat pulse on elevated
    v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220
    v0.9.3: right-aligned BPM, ::before badge dot, baseline teal, tier-1 pulse, dynamic sparkline
    v0.9.4: Phase 1a — Firebase SDK wiring + Start/End Session button foundation
-   v0.9.5: Session auto-starts on connect; button removed.
-   v0.9.6: Text brightness — --tx #ecebe5→#f5f4ef, --tx2 #9e9b90→#c4c1b6, --tx3 #605d55→#8e8b82
+   v0.9.5: Button removed. Connect sensor = session auto-starts; disconnect = session ends.
+   v0.10.0: Morning Reading mode + rolling 7/14/30/90-day baseline calibration.
+           Multi-session per day via physical reconnect. Zero friction.
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Constants ── */
@@ -699,6 +779,16 @@ const SAMPLE_WINDOW_MS = 2 * 60 * 1000;   // 2-min scrolling chart
 const MAX_SAMPLES      = 240;             // safety cap (~2 Hz * 120s)
 const STALE_MS         = 6000;            // BPM grey-out after no update
 const LS_KEY           = 'cadence';
+const LS_MORNING_KEY   = 'cadence_morning';    // v0.10: separate store for morning-reading data
+
+/* v0.10 · Morning reading & baseline calibration */
+const MORNING_DURATION_SEC     = 120;   // 2-min guided capture
+const MORNING_VALID_MIN_SEC    = 90;    // <90s capture does not count toward baseline
+const MORNING_VALID_MIN_SAMPLES= 60;    // at least 60 bpm samples
+const CALIBRATION_DAYS         = 14;    // Phase 1 length
+const CALIBRATION_MIN_READINGS = 10;    // min valid readings to complete Phase 1
+const MORNING_REMIND_HR_START  = 7;    // notification window (user-local): >= 7 AM
+const MORNING_REMIND_HR_END    = 11;   // < 11 AM
 
 /* ── v0.9: Detached widget popout ──
    Main tab owns the BT connection and all session logic.
@@ -829,6 +919,17 @@ const S = {
   sessionStartMs: null,  // unix ms start of recorded session
   preCheckin: null,      // {sleep, mood, hydrated, ate, note, savedAt}  (populated in Phase 1b)
   tierEvents: [],        // {tier, level, enter, exit, peakBpm, durMs, fired}  (populated in Phase 1b)
+
+  // v0.10 · Morning reading & baseline calibration
+  morningReadings: [],   // [{date:'YYYY-MM-DD', timestamp, durationSec, samples, avgBpm, minBpm, maxBpm, rmssd:null, sourceKind, complete, notes}]
+  morning: {             // live state during a capture
+    capturing: false,
+    startedAt: null,     // unix ms
+    countdownStartsAt: null,
+    samples: [],
+    minBpm: null, maxBpm: null, sumBpm: 0, nBpm: 0,
+  },
+  morningLastReminderKey: null, // 'YYYY-MM-DD' so we only fire once per day
 
   // Tier state per-tier
   acuteState: {},        // { A1: { enteredAt, fired, firedAt, belowSince } }
@@ -1226,6 +1327,9 @@ function onBpm(bpm, ts){
   bpm = Math.max(0, Math.min(250, bpm|0));
   S.currentBpm  = bpm;
   S.lastBpmTs   = now;
+
+  // v0.10: morning-reading capture hook — passes through regardless of session state
+  if(S.morning && S.morning.capturing && bpm > 0) onMorningSample(bpm);
 
   // Session aggregates
   if(bpm > 0){
@@ -2442,8 +2546,346 @@ function tickUi(){
   broadcastState();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   v0.10 · MORNING READING + BASELINE CALIBRATION
+═══════════════════════════════════════════════════════════ */
+
+function loadMorningReadings(){
+  try{
+    const raw = localStorage.getItem(LS_MORNING_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      if(p && Array.isArray(p.readings)) S.morningReadings = p.readings;
+      if(p && typeof p.lastReminderKey === 'string') S.morningLastReminderKey = p.lastReminderKey;
+    }
+  }catch(e){ console.warn('morning load failed', e); }
+}
+function saveMorningReadings(){
+  try{
+    localStorage.setItem(LS_MORNING_KEY, JSON.stringify({
+      readings: S.morningReadings,
+      lastReminderKey: S.morningLastReminderKey,
+      savedAt: Date.now()
+    }));
+  }catch(e){ console.warn('morning save failed', e); }
+}
+
+function todayKey(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+function todaysReading(){
+  const k = todayKey();
+  // Return the LATEST complete reading for today, if any
+  const todays = S.morningReadings.filter(r => r.date === k && r.complete);
+  if(!todays.length) return null;
+  return todays[todays.length - 1];
+}
+
+function validReadingsWithinDays(days, nowMs){
+  const cutoff = (nowMs || Date.now()) - days * 86400000;
+  return S.morningReadings.filter(r => r.complete && r.sourceKind !== 'demo' && r.timestamp >= cutoff);
+}
+
+function computeBaseline(days){
+  const rs = validReadingsWithinDays(days);
+  if(!rs.length) return null;
+  const sum = rs.reduce((a,r) => a + r.avgBpm, 0);
+  return { avg: sum / rs.length, count: rs.length };
+}
+
+function calibrationStatus(){
+  const valid = S.morningReadings.filter(r => r.complete && r.sourceKind !== 'demo');
+  if(!valid.length) return { phase:'phase1', daysLogged:0, validCount:0, daysTotal:CALIBRATION_DAYS, readingsTarget:CALIBRATION_MIN_READINGS, complete:false, firstDate:null };
+  const first = valid[0].timestamp;
+  const daysSinceFirst = Math.floor((Date.now() - first) / 86400000);
+  const complete = valid.length >= CALIBRATION_MIN_READINGS && daysSinceFirst >= CALIBRATION_DAYS;
+  return {
+    phase: complete ? 'phase2' : 'phase1',
+    daysLogged: Math.min(daysSinceFirst + 1, CALIBRATION_DAYS),
+    validCount: valid.length,
+    daysTotal: CALIBRATION_DAYS,
+    readingsTarget: CALIBRATION_MIN_READINGS,
+    complete,
+    firstDate: first
+  };
+}
+
+function renderMorningCard(){
+  const card = $('morningCard');
+  if(!card) return;
+  const today = todaysReading();
+  const calib = calibrationStatus();
+  const b7 = computeBaseline(7);
+  const b14 = computeBaseline(14);
+  const b30 = computeBaseline(30);
+  const b90 = computeBaseline(90);
+
+  // Show card whenever the app is used; style differs when today is logged vs pending
+  card.style.display = '';
+  card.classList.toggle('pending', !today);
+  card.classList.toggle('complete', !!today);
+
+  const tiEl = $('morningTi');
+  const stateEl = $('morningState');
+  const startBtn = $('morningStart');
+  const histBtn = $('morningHist');
+
+  if(today){
+    tiEl.textContent = 'Morning reading · complete';
+    const t = new Date(today.timestamp);
+    const h = t.getHours(); const mm = String(t.getMinutes()).padStart(2,'0');
+    const time12 = ((h % 12) || 12) + ':' + mm + (h < 12 ? ' AM' : ' PM');
+    // Compute flag: reading >10% above 7-day baseline → reduced-size flag
+    let flagHtml = '';
+    if(b7 && today.avgBpm > b7.avg * 1.10){
+      const pct = Math.round((today.avgBpm / b7.avg - 1) * 100);
+      flagHtml = ' · <span class="flag-reduced">reduced-size flag (+' + pct + '% vs 7-day)</span>';
+    } else if(b7){
+      const diff = today.avgBpm - b7.avg;
+      flagHtml = ' · <span style="color:var(--tx3)">' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' bpm vs 7-day</span>';
+    }
+    stateEl.innerHTML = '<strong>' + today.avgBpm.toFixed(1) + ' bpm</strong> · logged at ' + time12 + flagHtml;
+    startBtn.textContent = 'Log another';
+  } else {
+    tiEl.textContent = 'Morning reading · pending';
+    stateEl.innerHTML = calib.validCount === 0
+      ? "First reading. Sit quietly for 2 minutes — Cadence learns your resting baseline from the first 10–14 readings."
+      : "Today\u2019s reading hasn\u2019t been logged yet.";
+    startBtn.textContent = 'Start reading';
+  }
+  histBtn.style.display = S.morningReadings.length > 0 ? '' : 'none';
+
+  // Baselines
+  const bw = $('morningBaseline');
+  const anyBaseline = b7 || b14 || b30 || b90;
+  bw.style.display = anyBaseline ? '' : 'none';
+  if(anyBaseline){
+    const fmt = (b) => b ? b.avg.toFixed(1) : '—';
+    const nfmt = (b) => b ? b.count + (b.count === 1 ? ' reading' : ' readings') : '';
+    $('mb7').textContent = fmt(b7);
+    $('mb14').textContent = fmt(b14);
+    $('mb30').textContent = fmt(b30);
+    $('mb90').textContent = fmt(b90);
+    $('mb7n').textContent = nfmt(b7);
+    $('mb14n').textContent = nfmt(b14);
+    $('mb30n').textContent = nfmt(b30);
+    $('mb90n').textContent = nfmt(b90);
+    // Mark dim if we have fewer than 3 readings in a given window (low confidence)
+    const dimIf = (el, b) => { el.classList.toggle('dim', !b || b.count < 3); };
+    dimIf($('mb7'), b7); dimIf($('mb14'), b14); dimIf($('mb30'), b30); dimIf($('mb90'), b90);
+  }
+
+  // Calibration progress
+  const cc = $('morningCalib');
+  if(calib.complete){
+    cc.style.display = 'none';
+  } else {
+    cc.style.display = '';
+    $('morningCalibTxt').textContent = 'Calibration · ' + calib.validCount + ' of ' + calib.readingsTarget + ' readings · day ' + calib.daysLogged + '/' + calib.daysTotal;
+    const pct = Math.min(100, Math.round((calib.validCount / calib.readingsTarget) * 100));
+    $('morningCalibBar').style.width = pct + '%';
+  }
+}
+
+/* ─── Capture flow ─── */
+let morningTimerId = null;
+
+function openMorningModal(){
+  $('morningModal').classList.add('on');
+  const pre = $('morningPhasePre'), cap = $('morningPhaseCap'), done = $('morningPhaseDone');
+  pre.style.display = ''; cap.style.display = 'none'; done.style.display = 'none';
+  // Reset warn
+  const warn = $('morningPreWarn');
+  if(!S.connected){
+    warn.style.display = '';
+    $('morningPreBegin').disabled = true;
+  } else {
+    warn.style.display = 'none';
+    $('morningPreBegin').disabled = false;
+  }
+  $('morningModalTi').textContent = 'Morning reading';
+  $('morningModalSub').textContent = 'Two minutes seated, before caffeine or screens. Breathe normally.';
+}
+
+function closeMorningModal(){
+  $('morningModal').classList.remove('on');
+  cancelMorningCapture(/*silent*/true);
+}
+
+function beginMorningCountdown(){
+  if(!S.connected){ return; }
+  // 3-second countdown, then start capture
+  let c = 3;
+  $('morningPhasePre').style.display = 'none';
+  $('morningPhaseCap').style.display = '';
+  $('morningCapPhase').textContent = 'Starting in ' + c;
+  $('morningCapSub').textContent = 'settle in, breathe normally';
+  $('morningCountdown').textContent = '—';
+  $('morningProgressFill').style.width = '0%';
+  const tick = () => {
+    c--;
+    if(c > 0){ $('morningCapPhase').textContent = 'Starting in ' + c; }
+    else { clearInterval(cdown); startMorningCapture(); }
+  };
+  const cdown = setInterval(tick, 1000);
+}
+
+function startMorningCapture(){
+  S.morning.capturing = true;
+  S.morning.startedAt = Date.now();
+  S.morning.samples = [];
+  S.morning.minBpm = null; S.morning.maxBpm = null;
+  S.morning.sumBpm = 0; S.morning.nBpm = 0;
+  $('morningCapPhase').textContent = 'Capturing';
+  $('morningCapSub').textContent = 'sit still · breathe normally';
+
+  morningTimerId = setInterval(() => {
+    if(!S.morning.capturing) return;
+    const elapsed = (Date.now() - S.morning.startedAt) / 1000;
+    const remaining = Math.max(0, MORNING_DURATION_SEC - elapsed);
+    const mm = Math.floor(remaining / 60), ss = Math.floor(remaining % 60);
+    $('morningCountdown').textContent = mm + ':' + String(ss).padStart(2,'0');
+    const pct = Math.min(100, (elapsed / MORNING_DURATION_SEC) * 100);
+    $('morningProgressFill').style.width = pct + '%';
+    if(remaining <= 0){ finishMorningCapture(true); }
+  }, 200);
+}
+
+// Called by tick() when a new BPM sample arrives, gated on S.morning.capturing
+function onMorningSample(bpm){
+  if(!S.morning.capturing) return;
+  S.morning.samples.push({ t: Date.now(), bpm });
+  S.morning.sumBpm += bpm; S.morning.nBpm++;
+  if(S.morning.minBpm == null || bpm < S.morning.minBpm) S.morning.minBpm = bpm;
+  if(S.morning.maxBpm == null || bpm > S.morning.maxBpm) S.morning.maxBpm = bpm;
+  const avg = S.morning.sumBpm / S.morning.nBpm;
+  const bpmEl = $('morningCapBpm');
+  bpmEl.textContent = Math.round(bpm);
+  bpmEl.classList.remove('stale');
+  $('morningCapSub').textContent = S.morning.nBpm + ' samples';
+  $('morningCapAvg').textContent = avg.toFixed(1);
+  $('morningCapMin').textContent = S.morning.minBpm;
+  $('morningCapMax').textContent = S.morning.maxBpm;
+}
+
+function cancelMorningCapture(silent){
+  if(!S.morning.capturing && !silent){
+    $('morningModal').classList.remove('on');
+    return;
+  }
+  S.morning.capturing = false;
+  if(morningTimerId){ clearInterval(morningTimerId); morningTimerId = null; }
+  if(!silent){ $('morningModal').classList.remove('on'); }
+}
+
+function finishMorningCapture(completedNaturally){
+  S.morning.capturing = false;
+  if(morningTimerId){ clearInterval(morningTimerId); morningTimerId = null; }
+  const elapsed = (Date.now() - S.morning.startedAt) / 1000;
+  const avg = S.morning.nBpm > 0 ? S.morning.sumBpm / S.morning.nBpm : 0;
+  const valid = completedNaturally && elapsed >= MORNING_VALID_MIN_SEC && S.morning.nBpm >= MORNING_VALID_MIN_SAMPLES && S.sourceKind !== 'demo';
+
+  const reading = {
+    date: todayKey(),
+    timestamp: Date.now(),
+    durationSec: Math.round(elapsed),
+    samples: S.morning.nBpm,
+    avgBpm: parseFloat(avg.toFixed(2)),
+    minBpm: S.morning.minBpm || 0,
+    maxBpm: S.morning.maxBpm || 0,
+    rmssd: null, // placeholder — future H10 RR-based computation
+    sourceKind: S.sourceKind || 'unknown',
+    complete: valid,
+    notes: ''
+  };
+
+  S.morning.pending = reading; // stashed until user confirms save
+
+  // Show summary
+  $('morningPhaseCap').style.display = 'none';
+  $('morningPhaseDone').style.display = '';
+  $('morningDoneAvg').textContent = reading.avgBpm.toFixed(1);
+
+  const b7 = computeBaseline(7);
+  let subHtml = 'Captured ' + reading.samples + ' samples over ' + reading.durationSec + 's · min ' + reading.minBpm + ' · max ' + reading.maxBpm;
+  if(reading.sourceKind === 'demo'){
+    subHtml += '<br><span style="color:var(--t2)">Demo mode — will not count toward baseline.</span>';
+  } else if(!valid){
+    subHtml += '<br><span style="color:var(--t2)">Capture too short — needs ≥' + MORNING_VALID_MIN_SEC + 's and ≥' + MORNING_VALID_MIN_SAMPLES + ' samples to count.</span>';
+  }
+  $('morningDoneSub').innerHTML = subHtml;
+
+  const flagWrap = $('morningDoneFlagWrap');
+  flagWrap.innerHTML = '';
+  if(valid && b7){
+    const diff = reading.avgBpm - b7.avg;
+    const pct = (reading.avgBpm / b7.avg - 1) * 100;
+    if(pct > 10){
+      flagWrap.innerHTML = '<div class="rs-flag">⚠ Reduced-size day flag · +' + pct.toFixed(0) + '% vs 7-day baseline (' + b7.avg.toFixed(1) + ')</div>';
+    } else if(valid && b7){
+      flagWrap.innerHTML = '<div class="rs-flag ok">' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' bpm vs 7-day baseline (' + b7.avg.toFixed(1) + ')</div>';
+    }
+  }
+}
+
+function saveMorningReadingFromPending(){
+  const r = S.morning.pending;
+  if(!r) return;
+  S.morningReadings.push(r);
+  saveMorningReadings();
+  S.morning.pending = null;
+  $('morningModal').classList.remove('on');
+  renderMorningCard();
+  S.log.push({ t: Date.now(), id: 'MORNING', level: 0, kind: 'morning', bpm: r.avgBpm|0, msg: 'Morning reading saved · ' + r.avgBpm.toFixed(1) + ' bpm' });
+  renderLog();
+}
+
+function discardMorningReadingPending(){
+  S.morning.pending = null;
+  $('morningModal').classList.remove('on');
+}
+
+function showMorningHistory(){
+  // Quick alert-style history — replace with modal in a later pass
+  const rs = [...S.morningReadings].reverse();
+  if(!rs.length){ alert('No readings yet.'); return; }
+  const lines = rs.slice(0, 30).map(r => {
+    const vmark = (r.complete && r.sourceKind !== 'demo') ? '✓' : '·';
+    return vmark + '  ' + r.date + '  ' + r.avgBpm.toFixed(1) + ' bpm  (' + r.durationSec + 's, ' + r.samples + ' samples, ' + r.sourceKind + ')';
+  });
+  alert('Morning reading history (last 30):\n\n' + lines.join('\n'));
+}
+
+function wireMorningCard(){
+  const start = $('morningStart');
+  if(start) start.addEventListener('click', openMorningModal);
+  const hist = $('morningHist');
+  if(hist) hist.addEventListener('click', showMorningHistory);
+  const closeBtn = $('morningClose');
+  if(closeBtn) closeBtn.addEventListener('click', closeMorningModal);
+  const preCancel = $('morningPreCancel');
+  if(preCancel) preCancel.addEventListener('click', closeMorningModal);
+  const preBegin = $('morningPreBegin');
+  if(preBegin) preBegin.addEventListener('click', beginMorningCountdown);
+  const capCancel = $('morningCapCancel');
+  if(capCancel) capCancel.addEventListener('click', () => cancelMorningCapture(false));
+  const doneSave = $('morningDoneSave');
+  if(doneSave) doneSave.addEventListener('click', saveMorningReadingFromPending);
+  const doneDiscard = $('morningDoneDiscard');
+  if(doneDiscard) doneDiscard.addEventListener('click', discardMorningReadingPending);
+  // Click outside modal closes it
+  const mb = $('morningModal');
+  if(mb) mb.addEventListener('click', (e) => { if(e.target === mb) closeMorningModal(); });
+}
+
 function init(){
   loadSettings();
+  loadMorningReadings();
 
   // v0.9: popout mode — display-only, no BT, no audio, no scheduled alerts.
   // Just load state from main tab via BroadcastChannel and render.
@@ -2456,6 +2898,8 @@ function init(){
   renderAll();
   renderLog();
   wire();
+  wireMorningCard();
+  renderMorningCard();
   preflightBanner();
 
   setInterval(tickUi, 1000);
@@ -2473,5 +2917,70 @@ function init(){
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
 </script>
+
+<!-- ═══════════════ v0.10 MORNING READING MODAL ═══════════════ -->
+<div class="mbg" id="morningModal">
+  <div class="mbox">
+    <div class="mhdr">
+      <div>
+        <div class="mti" id="morningModalTi">Morning reading</div>
+        <div class="msub" id="morningModalSub">Two minutes seated, before caffeine or screens. Breathe normally.</div>
+      </div>
+      <button class="mclose" id="morningClose">✕</button>
+    </div>
+    <div class="mbody">
+      <!-- Phase 1: preamble (awaiting sensor) -->
+      <div id="morningPhasePre">
+        <div class="reading-instr" id="morningPreInstr">
+          Sit upright. Feet on the floor. Before caffeine, food, or screens.<br>
+          Breathe normally — do not slow your breath.<br>
+          <em>The reading runs for 2 minutes. You can cancel at any point.</em>
+        </div>
+        <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">
+          <button class="morning-btn ghost" id="morningPreCancel">Cancel</button>
+          <button class="morning-btn" id="morningPreBegin">Begin — 3 second countdown</button>
+        </div>
+        <div id="morningPreWarn" style="margin-top:12px;display:none" class="banner warn">
+          <div class="banner-ic">!</div>
+          <div class="banner-body"><strong id="morningPreWarnTi">Connect your sensor first</strong><em id="morningPreWarnSub">Click "Connect sensor" in the header, then return here.</em></div>
+        </div>
+      </div>
+
+      <!-- Phase 2: capturing -->
+      <div id="morningPhaseCap" style="display:none">
+        <div class="reading-hero">
+          <div class="reading-phase" id="morningCapPhase">Capturing</div>
+          <div class="reading-bpm stale" id="morningCapBpm">—</div>
+          <div class="reading-sub" id="morningCapSub">waiting for first sample</div>
+          <div class="reading-countdown" id="morningCountdown">02:00</div>
+          <div class="reading-progress"><div class="reading-progress-fill" id="morningProgressFill"></div></div>
+        </div>
+        <div class="reading-stats">
+          <div class="reading-stat"><div class="lbl">Running avg</div><div class="v" id="morningCapAvg">—</div></div>
+          <div class="reading-stat"><div class="lbl">Min</div><div class="v" id="morningCapMin">—</div></div>
+          <div class="reading-stat"><div class="lbl">Max</div><div class="v" id="morningCapMax">—</div></div>
+        </div>
+        <div style="margin-top:18px;display:flex;justify-content:flex-end;gap:8px">
+          <button class="morning-btn ghost" id="morningCapCancel">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Phase 3: summary -->
+      <div id="morningPhaseDone" style="display:none">
+        <div class="reading-summary">
+          <div><span class="rs-main" id="morningDoneAvg">—</span><span class="rs-u">bpm</span></div>
+          <div class="rs-sub" id="morningDoneSub">—</div>
+          <div id="morningDoneFlagWrap"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px">
+          <button class="morning-btn ghost" id="morningDoneDiscard">Discard</button>
+          <button class="morning-btn" id="morningDoneSave">Save reading</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 </body>
 </html>
