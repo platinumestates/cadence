@@ -293,10 +293,12 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 .widget-box.tier-4::before{background:var(--t4)}
 .widget-box.tier-5::before{background:var(--t5)}
 .w-top{display:flex;align-items:center;gap:18px;flex:0 0 auto}
-.w-bpm{font-family:var(--f-mono);font-size:108px;font-weight:700;letter-spacing:-5px;color:var(--tx);line-height:.88;font-variant-numeric:tabular-nums;transition:color .4s,transform .2s;min-width:180px;text-align:left;transform-origin:center}
+.w-bpm{font-family:var(--f-mono);font-size:108px;font-weight:700;letter-spacing:-5px;color:var(--t0);line-height:.88;font-variant-numeric:tabular-nums;transition:color .4s,transform .2s;min-width:180px;text-align:right;transform-origin:center;padding-right:8px}
+.w-bpm.t-0{color:var(--t0)}
 .w-bpm.t-1{color:var(--t1)}.w-bpm.t-2{color:var(--t2)}.w-bpm.t-3{color:var(--t3)}.w-bpm.t-4{color:var(--t4)}.w-bpm.t-5{color:var(--t5)}
 .w-bpm.stale{opacity:.35}
-/* v0.9.1: BPM heartbeat — animation duration derived from live BPM (60000/bpm ms) in JS */
+/* v0.9.1: BPM heartbeat — animation duration derived from live BPM (60000/bpm ms) in JS.
+   v0.9.3: fires at tier 1 (≥95 bpm) for earlier visual feedback. */
 .w-bpm.beating{animation:heartbeat var(--beat-duration,600ms) ease-out infinite}
 .w-bpm.t-3.beating,.w-bpm.t-4.beating,.w-bpm.t-5.beating{filter:drop-shadow(0 0 10px currentColor)}
 @keyframes heartbeat{
@@ -306,8 +308,12 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   32% { transform: scale(1.07); }
 }
 .w-mid{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;justify-content:center}
-.w-badge{font-family:var(--f-body);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:var(--t0);display:flex;align-items:center;gap:7px;transition:color .4s}
-.w-badge .dot{width:8px;height:8px;background:currentColor;border-radius:50%}
+/* v0.9.3: dot rendered as ::before on the text span (not a separate .dot span) —
+   previous separate span rendered oversized on some tiers in Chrome, obscuring first letter. */
+.w-badge{font-family:var(--f-body);font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:700;color:var(--t0);display:flex;align-items:center;transition:color .4s}
+.w-badge > span{display:inline-flex;align-items:center;gap:9px}
+.w-badge > span::before{content:'';display:inline-block;width:8px;height:8px;background:currentColor;border-radius:50%;flex:0 0 auto}
+.w-badge.t-0{color:var(--t0)}
 .w-badge.t-1{color:var(--t1)}.w-badge.t-2{color:var(--t2)}.w-badge.t-3{color:var(--t3)}.w-badge.t-4{color:var(--t4)}.w-badge.t-5{color:var(--t5)}
 .w-statrow{font-size:15px;color:var(--tx);font-family:var(--f-mono);letter-spacing:.2px;font-variant-numeric:tabular-nums;line-height:1.15;font-weight:500}
 .w-statrow em{color:var(--tx3);font-style:normal;letter-spacing:1.3px;text-transform:uppercase;font-size:10px;font-weight:700;font-family:var(--f-body);margin-right:8px;display:inline-block;min-width:34px}
@@ -348,7 +354,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.9.2 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.9.3 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -461,7 +467,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
       <div class="w-top">
         <div class="w-bpm stale" id="wBpm">—</div>
         <div class="w-mid">
-          <div class="w-badge" id="wBadge"><span class="dot"></span><span id="wBadgeText">Standby</span></div>
+          <div class="w-badge" id="wBadge"><span id="wBadgeText">Standby</span></div>
           <div class="w-statrow"><em>Peak</em><span id="wPeak">—</span></div>
           <div class="w-statrow"><em>≥95</em><span id="wTime">00:00</span></div>
         </div>
@@ -650,10 +656,13 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CADENCE v0.9.2 — HRM Trading Companion
+   CADENCE v0.9.3 — HRM Trading Companion
    v0.9:   detached popout widget via window.open + BroadcastChannel
    v0.9.1: stacked layout, heartbeat pulse on elevated
-   v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220, sparkline 34px → 46px
+   v0.9.2: BPM 64px → 108px, popout 340×170 → 420×220
+   v0.9.3: BPM right-aligned, badge dot via ::before (fixes first-letter obscured),
+           baseline teal color, pulse starts at tier 1 (≥95), sparkline stretches
+           to full width when session shorter than 2-min window
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Constants ── */
@@ -1781,10 +1790,10 @@ function renderWidget(){
   wBpm.textContent = S.currentBpm || '—';
   wBpm.className = 'w-bpm' + (stale?' stale':'') + (S.currentBpm ? ' t-'+curBand : '');
 
-  // v0.9.1: Heartbeat pulse — fires when BPM puts you in tier 2+ (≥100 bpm),
+  // v0.9.1: Heartbeat pulse — fires when BPM puts you in tier 1+ (≥95 bpm, v0.9.3),
   // beat duration synced to actual heart rate (60000ms / bpm).
   // Stale/disconnected state suppresses animation.
-  if(!stale && S.currentBpm && curBand >= 2){
+  if(!stale && S.currentBpm && curBand >= 1){
     wBpm.classList.add('beating');
     wBpm.style.setProperty('--beat-duration', Math.round(60000 / S.currentBpm) + 'ms');
   } else {
@@ -1799,10 +1808,12 @@ function renderWidget(){
   $('wTime').textContent = fmtClock(S.chronicSec);
   $('widgetBox').className = 'widget-box tier-'+curBand;
 
-  // Spark — now full-width across the bottom of the widget
+  // Spark — full-width across the bottom of the widget.
+  // v0.9.3: if session is shorter than SAMPLE_WINDOW_MS, stretch the available data
+  // across the full canvas width rather than letting it cluster on the right.
   const c = $('wSpark'); if(!c) return;
   const dpr = window.devicePixelRatio || 1;
-  const cssW = c.clientWidth || 288, cssH = c.clientHeight || 34;
+  const cssW = c.clientWidth || 288, cssH = c.clientHeight || 46;
   if(c.width !== cssW*dpr || c.height !== cssH*dpr){ c.width = cssW*dpr; c.height = cssH*dpr; }
   const ctx = c.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -1810,14 +1821,16 @@ function renderWidget(){
   const samples = S.samples;
   if(samples.length >= 2){
     const minB = 80, maxB = 130;
-    const t0 = now - SAMPLE_WINDOW_MS;
+    const earliestT = samples[0].t;
+    const spanMs = Math.min(SAMPLE_WINDOW_MS, Math.max(5000, now - earliestT));
+    const t0 = now - spanMs;
     ctx.strokeStyle = curBand>0 ? ['#42e5e5','#6cf03c','#ffe135','#ff9a2e','#ff3347','#d11f3f'][curBand] : '#42e5e5';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     let started = false;
     samples.forEach(s => {
       if(s.t < t0) return;
-      const x = cssW * (s.t - t0) / SAMPLE_WINDOW_MS;
+      const x = cssW * (s.t - t0) / spanMs;
       const y = cssH * (1 - (Math.max(minB, Math.min(maxB, s.bpm)) - minB) / (maxB - minB));
       if(!started){ ctx.moveTo(x,y); started = true; }
       else ctx.lineTo(x,y);
