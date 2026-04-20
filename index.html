@@ -503,7 +503,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.2 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.12.3 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -1493,7 +1493,6 @@ function nowInET(){
 }
 
 function checkScheduledAlerts(){
-  if(!S.connected) return;
   if(!S.settings.scheduledEnabled) return;
 
   const t = nowInET();
@@ -3786,7 +3785,7 @@ function init(){
   setInterval(() => { if(S.connected) renderChart(); }, 1000);
 
   // Scheduled alerts — check every 30s so a within-minute change still fires on time
-  setInterval(checkScheduledAlerts, 30000);
+  setInterval(checkScheduledAlerts, 1000);
 
   // Resize
   window.addEventListener('resize', () => { renderChart(); renderWidget(); });
