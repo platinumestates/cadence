@@ -503,7 +503,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.3 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.12.4 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -2482,16 +2482,23 @@ function savePostCheckin(){
   };
   console.log('[Cadence] Post-checkin saved:', S.pendingSession.postCheckin);
   closePostCheckin();
-  writePendingSessionToFirestore();
+  // v0.12.4 · UPDATE-only path. Original session doc was written at endSession.
+  // This call now adds the postCheckin tags to the existing doc rather than
+  // creating it. updatePendingSessionPostCheckin handles both the update and
+  // localStorage cleanup.
+  updatePendingSessionPostCheckin();
 }
 
 function skipPostCheckin(){
-  // Still write the session — just without tags. Better to have data than lose it.
+  // v0.12.4 · No write needed — session was already written at endSession.
+  // Just close the modal and clear the pending state.
   if(!S.pendingSession){ closePostCheckin(); return; }
   S.pendingSession.postCheckin = null;
-  console.log('[Cadence] Post-checkin skipped — writing session without tags');
+  console.log('[Cadence] Post-checkin skipped — session already written without tags');
   closePostCheckin();
-  writePendingSessionToFirestore();
+  // Clear pending so it doesn't trigger recovery flow on next page load
+  try { localStorage.removeItem(LS_PENDING_KEY); } catch(e){}
+  S.pendingSession = null;
 }
 
 function wirePostCheckin(){
@@ -2540,6 +2547,36 @@ function writePendingSessionToFirestore(){
     .catch(err => {
       console.error('[Cadence] ✗ Firestore write failed:', err && err.message);
       // Leave S.pendingSession + localStorage intact so we can retry later
+    });
+}
+
+/* ─── v0.12.4 · Post-checkin update ───
+   Called from savePostCheckin after the original session doc was written at
+   endSession. Adds the postCheckin tags to the existing doc via a partial
+   update, leaving all other fields untouched. */
+function updatePendingSessionPostCheckin(){
+  const ps = S.pendingSession;
+  if(!ps || !ps.postCheckin){ return; }
+  if(!window._cadenceDb){
+    console.warn('[Cadence] Firestore not available — postCheckin not saved');
+    return;
+  }
+  const docRef = window._cadenceDb.collection('cadence_sessions').doc(ps.sessionId);
+  docRef.update({ postCheckin: ps.postCheckin })
+    .then(() => {
+      console.log('[Cadence] ✓ postCheckin tags updated on:', ps.sessionId);
+      try { localStorage.removeItem(LS_PENDING_KEY); } catch(e){}
+      S.pendingSession = null;
+    })
+    .catch(err => {
+      console.error('[Cadence] ✗ postCheckin update failed:', err && err.message);
+      // Fallback: try a full set in case the doc somehow wasn't written
+      // at endSession (shouldn't happen, but defensive).
+      docRef.set(ps).then(() => {
+        console.log('[Cadence] ✓ Fallback full-write succeeded:', ps.sessionId);
+        try { localStorage.removeItem(LS_PENDING_KEY); } catch(e){}
+        S.pendingSession = null;
+      }).catch(e2 => console.error('[Cadence] ✗ Fallback also failed:', e2 && e2.message));
     });
 }
 
@@ -2624,6 +2661,17 @@ function startSession(){
   S.tierEvents = [];
   S.sessionBuckets = [];
   S.bucketAccum = null;
+  // v0.12.4 · CRITICAL bug fix: reset summary counters that were leaking across
+  // sessions. Prior behavior: short test sessions inherited maxBpm/sumBpm/nBpm/
+  // chronicSec from previous long sessions, producing garbage summary data
+  // (e.g. a 4-second session reporting peakBpm=121 and chronicSec=6991 from
+  // an unrelated 130-min prior session). Reset to baseline values so each
+  // session's summary reflects only that session's readings.
+  S.maxBpm = 0;
+  S.minBpm = 999;
+  S.sumBpm = 0;
+  S.nBpm = 0;
+  S.chronicSec = 0;
   console.log('[Cadence] Session started:', S.sessionId,
     marketOpen ? '' : '(OFF-HOURS override active — disable in Settings when done testing)');
   renderOffHoursBanner(false);
@@ -2701,8 +2749,19 @@ function endSession(){
   // read them during the post-checkin modal display. clearSession() or the next
   // startSession() resets them.
 
-  // Open the post-session tag modal. If user skips/closes, we still write to Firestore
-  // (summary + data, no tags) so the session isn't lost. If user saves, tags go with it.
+  // v0.12.4 · CRITICAL: write to Firestore IMMEDIATELY at end of session.
+  // Previously, writes were gated on the user clicking Save or Skip in the
+  // post-checkin modal — which meant any session that ended without modal
+  // interaction (tab close, page reload, browser crash, extension reload)
+  // was lost. Sessions sat in localStorage under a single key that the next
+  // session's endSession() would clobber, silently destroying earlier data.
+  //
+  // New flow: fire write at end of session with whatever data we have. The
+  // post-checkin modal still opens, but completing it now triggers an UPDATE
+  // that adds tags to the existing doc — not the original write.
+  writePendingSessionToFirestore();
+
+  // Open the post-session tag modal. Completion adds tags via UPDATE.
   openPostCheckin();
 }
 
@@ -3789,6 +3848,44 @@ function init(){
 
   // Resize
   window.addEventListener('resize', () => { renderChart(); renderWidget(); });
+
+  // v0.12.4 · Beforeunload flush. If the tab is closing while a session is
+  // active, snapshot the in-progress data into localStorage so recoverPendingSession()
+  // can retry the Firestore write on the next page load. This is the tab-close
+  // safety net — previously, an active session at tab-close was silently lost
+  // because endSession() never fired.
+  window.addEventListener('beforeunload', () => {
+    if(!S.sessionId) return;  // no active session — nothing to flush
+    try {
+      // Close the current bucket first so the flush captures the most recent data
+      flushSessionBucket();
+      const startedAt = S.sessionStartMs;
+      const endedAt = Date.now();
+      const dateKey = computeDateKeyET(startedAt);
+      const avgBpm = S.nBpm > 0 ? Math.round(S.sumBpm / S.nBpm) : null;
+      const ps = {
+        sessionId: S.sessionId,
+        startMs: startedAt,
+        endMs: endedAt,
+        durMs: endedAt - startedAt,
+        dateKey: dateKey,
+        source: S.sourceKind || S.lastKnownSource || 'unknown',
+        preCheckin: S.preCheckin,
+        postCheckin: null,
+        buckets: S.sessionBuckets.slice(),
+        tierEvents: S.tierEvents.slice(),
+        summary: {
+          avgBpm: avgBpm,
+          peakBpm: S.maxBpm > 0 ? S.maxBpm : null,
+          minBpm: S.minBpm < 999 ? S.minBpm : null,
+          chronicSec: Math.round(S.chronicSec),
+          tiersFired: S.tierEvents.map(e => e.tier)
+        },
+        endedReason: 'beforeunload'   // diagnostic
+      };
+      localStorage.setItem(LS_PENDING_KEY, JSON.stringify(ps));
+    } catch(e) { /* swallow — page is closing anyway */ }
+  });
 }
 
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
