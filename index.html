@@ -503,7 +503,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.4 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.12.5 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -2522,6 +2522,40 @@ function wirePostCheckin(){
   if(saveBtn) saveBtn.addEventListener('click', savePostCheckin);
 }
 
+/* ─── v0.12.5 · REST-format helpers for sendBeacon path ───
+   The Firebase SDK accepts plain JS objects, but navigator.sendBeacon writes
+   directly to the Firestore REST API which requires typed field values. These
+   helpers convert our pending-session object to that format. Shared with the
+   beforeunload handler below. */
+const FIREBASE_WEB_API_KEY = 'AIzaSyAzgGUbVcJV7R7O_r_l8CguM8SNPZ3pNAQ';
+
+function jsToFirestoreFields(obj){
+  if(obj === null || obj === undefined) return { nullValue: null };
+  if(typeof obj === 'boolean') return { booleanValue: obj };
+  if(typeof obj === 'number'){
+    // Firestore distinguishes integer vs double; use integer when safe
+    if(Number.isInteger(obj) && Math.abs(obj) < 9e15) return { integerValue: String(obj) };
+    return { doubleValue: obj };
+  }
+  if(typeof obj === 'string') return { stringValue: obj };
+  if(Array.isArray(obj)){
+    return { arrayValue: { values: obj.map(jsToFirestoreFields) } };
+  }
+  if(typeof obj === 'object'){
+    const fields = {};
+    Object.keys(obj).forEach(k => { fields[k] = jsToFirestoreFields(obj[k]); });
+    return { mapValue: { fields: fields } };
+  }
+  return { stringValue: String(obj) };
+}
+
+function buildFirestoreSessionPayload(ps){
+  // Firestore REST doc format: { fields: { field1: {typeKey: value}, ... } }
+  const fields = {};
+  Object.keys(ps).forEach(k => { fields[k] = jsToFirestoreFields(ps[k]); });
+  return { fields: fields };
+}
+
 /* ─── Firestore write ───
    One doc per session at cadence_sessions/{sessionId}.
    Async, non-blocking. Failures log to console; pending session stays in localStorage
@@ -2765,28 +2799,32 @@ function endSession(){
   openPostCheckin();
 }
 
-/* v0.11.8 · CME-style date key: America/New_York, rolling over at 6pm ET.
-   Matches TradeLog Pro's dateKey format so HR sessions and trades share a day boundary. */
+/* v0.12.5 · CME-style date key: America/New_York, rolling over at 6pm ET.
+   MUST mirror TradeLog Pro's tradingDK() exactly (forward rollover):
+     ET hour >= 18  → trading day = NEXT calendar day (Mon 8pm → Tue session)
+     ET hour <  18  → trading day = TODAY             (Tue 10am → Tue session)
+   Previous v0.11.8 implementation used BACKWARD rollover and mis-dated every
+   daytime session by one calendar day, breaking the TradeLog join on dateKey. */
 function computeDateKeyET(unixMs){
   const d = new Date(unixMs);
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', hour12: false
-  }).formatToParts(d);
-  const get = n => { const p = parts.find(x => x.type === n); return p ? p.value : ''; };
-  let y = parseInt(get('year'));
-  let m = parseInt(get('month'));
-  let day = parseInt(get('day'));
-  const hr = parseInt(get('hour')) || 0;
-  // Before 6pm ET = previous trading day (standard CME convention)
-  if(hr < 18){
-    const prior = new Date(Date.UTC(y, m-1, day) - 24*3600*1000);
-    y = prior.getUTCFullYear();
-    m = prior.getUTCMonth() + 1;
-    day = prior.getUTCDate();
+  const pad2 = n => n < 10 ? '0' + n : String(n);
+  let etHour = 0;
+  try {
+    const etStr = d.toLocaleString('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit' });
+    etHour = parseInt(etStr, 10) || 0;
+  } catch(e) { etHour = d.getHours(); }
+  let target = d;
+  if(etHour >= 18){
+    // Roll forward one day: next calendar date in ET
+    target = new Date(d.getTime() + 24*3600*1000);
   }
-  return y + '-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  try {
+    // toLocaleDateString with en-CA yields YYYY-MM-DD in the requested timeZone
+    const parts = target.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }).split('-');
+    return parts[0] + '-' + pad2(parseInt(parts[1], 10)) + '-' + pad2(parseInt(parts[2], 10));
+  } catch(e) {
+    return target.getFullYear() + '-' + pad2(target.getMonth()+1) + '-' + pad2(target.getDate());
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3854,6 +3892,8 @@ function init(){
   // can retry the Firestore write on the next page load. This is the tab-close
   // safety net — previously, an active session at tab-close was silently lost
   // because endSession() never fired.
+  // v0.12.5 · Also fire a navigator.sendBeacon() direct Firestore write so the
+  // session is preserved even if the user never reopens Cadence on this browser.
   window.addEventListener('beforeunload', () => {
     if(!S.sessionId) return;  // no active session — nothing to flush
     try {
@@ -3884,6 +3924,17 @@ function init(){
         endedReason: 'beforeunload'   // diagnostic
       };
       localStorage.setItem(LS_PENDING_KEY, JSON.stringify(ps));
+      // v0.12.5 · sendBeacon direct Firestore write. Uses the same REST API
+      // and API key as writePendingSessionToFirestore but is fire-and-forget
+      // and allowed during page unload where fetch() would be cancelled.
+      try {
+        if(navigator.sendBeacon && typeof buildFirestoreSessionPayload === 'function'){
+          const payload = buildFirestoreSessionPayload(ps);
+          const url = 'https://firestore.googleapis.com/v1/projects/peptide-tracker-84cf5/databases/(default)/documents/cadence_sessions?documentId=' + encodeURIComponent(ps.sessionId) + '&key=' + FIREBASE_WEB_API_KEY;
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        }
+      } catch(_) { /* sendBeacon best-effort; localStorage still holds the pending */ }
     } catch(e) { /* swallow — page is closing anyway */ }
   });
 }
