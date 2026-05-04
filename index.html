@@ -198,6 +198,48 @@ body.widget .reset-tb-btn{display:none}
 .pacer-close-x{position:absolute;top:22px;right:26px;background:none;border:none;color:var(--tx3);font-size:24px;cursor:pointer;line-height:1;padding:4px 10px}
 .pacer-close-x:hover{color:var(--tx)}
 
+/* v0.13.0 · EFT Tapping Module */
+.reset-hub-tabs{display:flex;gap:6px;justify-content:center;margin-bottom:22px}
+.reset-hub-tab{background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);padding:8px 22px;font-family:var(--f-body);font-weight:700;font-size:11px;border-radius:7px;cursor:pointer;letter-spacing:1.4px;text-transform:uppercase;transition:all .14s}
+.reset-hub-tab:hover{color:var(--tx);border-color:var(--bd3)}
+.reset-hub-tab.on{background:var(--t0);color:#001b1f;border-color:var(--t0);box-shadow:0 0 14px rgba(66,229,229,.25)}
+.eft-pick-wrap{max-width:560px;margin:0 auto;padding:6px 22px;color:var(--tx)}
+.eft-pick-wrap h2{font-family:var(--f-head);font-size:24px;font-weight:600;font-style:italic;color:var(--tx);margin-bottom:6px;text-align:center;letter-spacing:-.3px}
+.eft-pick-wrap p.lead{font-family:var(--f-body);font-size:12.5px;color:var(--tx2);line-height:1.5;text-align:center;margin-bottom:18px}
+.eft-protocol-grid{display:flex;flex-direction:column;gap:8px}
+.eft-protocol-card{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:11px 14px;cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:12px}
+.eft-protocol-card:hover{border-color:var(--t0);background:var(--bg3);transform:translateY(-1px)}
+.eft-protocol-card.suggested{border-color:var(--t0);background:rgba(66,229,229,.08);box-shadow:0 0 18px rgba(66,229,229,.2)}
+.eft-pcard-tag{font-family:var(--f-mono);font-size:11px;letter-spacing:1.4px;color:var(--t0);font-weight:700;background:var(--t0-bg);padding:4px 9px;border-radius:5px;flex-shrink:0;min-width:32px;text-align:center}
+.eft-pcard-body{flex:1;min-width:0}
+.eft-pcard-title{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px}
+.eft-pcard-sub{font-size:10.5px;color:var(--tx3);letter-spacing:.4px}
+.eft-pcard-suggest{font-family:var(--f-mono);font-size:9px;letter-spacing:1.5px;color:var(--t0);text-transform:uppercase;background:var(--t0-bg);padding:3px 7px;border-radius:4px;font-weight:700;flex-shrink:0}
+.eft-runner{max-width:560px;margin:0 auto;padding:6px 22px;color:var(--tx)}
+.eft-stage-label{font-family:var(--f-mono);font-size:10px;letter-spacing:1.6px;color:var(--t0);text-transform:uppercase;margin-bottom:4px;text-align:center;font-weight:700}
+.eft-stage-title{font-family:var(--f-head);font-size:22px;font-weight:600;font-style:italic;color:var(--tx);margin-bottom:18px;text-align:center;letter-spacing:-.3px}
+.eft-suds-row{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.eft-suds-btn{width:38px;height:38px;background:var(--bg2);border:1px solid var(--bd2);color:var(--tx2);font-family:var(--f-mono);font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .12s}
+.eft-suds-btn:hover{border-color:var(--bd3);color:var(--tx)}
+.eft-suds-btn.on{background:var(--t0);color:#001b1f;border-color:var(--t0);box-shadow:0 0 12px rgba(66,229,229,.4)}
+.eft-suds-msg{text-align:center;font-size:12px;color:var(--tx2);min-height:18px;margin-bottom:18px;letter-spacing:.3px}
+.eft-setup-card{background:rgba(66,229,229,.08);border:1px solid rgba(66,229,229,.35);border-radius:10px;padding:14px 18px;margin-bottom:18px;text-align:center;font-size:13.5px;color:var(--tx);line-height:1.5;font-style:italic}
+.eft-aggression-pre{background:rgba(223,95,86,.08);border:1px solid rgba(223,95,86,.35);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:var(--tx);line-height:1.55}
+.eft-aggression-pre strong{color:var(--t3);display:block;margin-bottom:6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+.eft-point-card{background:var(--bg2);border:2px solid var(--t0);border-radius:12px;padding:18px 20px;margin-bottom:14px;text-align:center;box-shadow:0 0 20px rgba(66,229,229,.16)}
+.eft-point-pos{font-family:var(--f-mono);font-size:10px;letter-spacing:1.6px;color:var(--tx3);text-transform:uppercase;margin-bottom:6px;font-weight:700}
+.eft-point-name{font-family:var(--f-head);font-size:19px;font-weight:600;color:var(--t0);margin-bottom:3px;letter-spacing:-.2px}
+.eft-point-loc{font-size:10.5px;color:var(--tx3);letter-spacing:.4px;margin-bottom:14px}
+.eft-point-line{font-size:16px;color:var(--tx);font-style:italic;line-height:1.5;font-family:var(--f-head);font-weight:500;letter-spacing:-.1px}
+.eft-progress{display:flex;gap:5px;justify-content:center;margin-bottom:14px}
+.eft-progress-dot{width:8px;height:8px;border-radius:50%;background:var(--bg3);transition:all .2s}
+.eft-progress-dot.done{background:var(--t0);opacity:.6}
+.eft-progress-dot.now{background:var(--t0);transform:scale(1.5);box-shadow:0 0 10px rgba(66,229,229,.6)}
+.eft-round-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;font-size:11px;color:var(--tx2);letter-spacing:.4px}
+.eft-round-pill{background:var(--bg2);border:1px solid var(--bd);padding:4px 11px;border-radius:14px;font-family:var(--f-mono);font-size:11px;color:var(--tx);font-weight:600;letter-spacing:.6px}
+.eft-note{font-size:11px;color:var(--tx3);text-align:center;line-height:1.5;font-style:italic;margin-bottom:14px;max-width:420px;margin-left:auto;margin-right:auto}
+.eft-context-pill{display:inline-block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:1.5px;color:var(--t0);background:var(--t0-bg);padding:3px 9px;border-radius:5px;font-weight:700;margin-bottom:10px;text-transform:uppercase}
+
 /* v0.11 · Reading history modal (replaces alert() placeholder) */
 .history-row{display:grid;grid-template-columns:80px 58px auto 60px 70px;gap:12px;padding:9px 4px;border-top:1px solid var(--bd);font-size:12.5px;align-items:center}
 .history-row:first-of-type{border-top:none}
@@ -503,7 +545,7 @@ body.widget.orphan .widget-box::after{content:'Main tab disconnected — reopen 
   <div class="tb-inner">
     <div class="logo">
       <div class="logo-w"><em>Cadence</em></div>
-      <div class="logo-sub">v0.12.5 · HRM Trading Companion</div>
+      <div class="logo-sub">v0.13.0 · HRM Trading Companion</div>
     </div>
 
     <div class="tb-mid">
@@ -3715,16 +3757,38 @@ function openPacer(){
   const mb = document.getElementById('pacerModal');
   if(!mb) return;
   mb.classList.add('on');
+  // v0.13.0: ensure tabs visible, default to Breath
+  switchResetTab('breath');
   document.getElementById('pacerSetup').style.display = '';
   document.getElementById('pacerRunning').style.display = 'none';
   document.getElementById('pacerDone').style.display = 'none';
+  document.getElementById('eftPicker').style.display = 'none';
+  document.getElementById('eftRunner').style.display = 'none';
   // Set CSS variables so the circle animation duration matches pacer timing
   document.documentElement.style.setProperty('--pacer-inhale', (PACER.inhaleMs/1000) + 's');
   document.documentElement.style.setProperty('--pacer-exhale', (PACER.exhaleMs/1000) + 's');
 }
 
+// v0.13.0 · Open reset modal directly to a specific EFT protocol (used by URL ?reset=pN)
+function openReset(protocolId){
+  const mb = document.getElementById('pacerModal');
+  if(!mb) return;
+  mb.classList.add('on');
+  if(protocolId && EFT_PROTOCOLS.find(p => p.id === protocolId)){
+    switchResetTab('tap');
+    startEftProtocol(protocolId);
+  } else {
+    openPacer();
+  }
+}
+
 function closePacer(){
   stopPacer();
+  // v0.13.0: also reset EFT state if a run was in progress (saves partial run if applicable)
+  if(typeof EFT !== 'undefined' && EFT.proto && (EFT.stage === 'tap' || EFT.stage === 'sudsAfter')){
+    try { saveEftRun({completed:false}); } catch(e){}
+  }
+  if(typeof EFT !== 'undefined'){ EFT.stage = 'pick'; EFT.proto = null; EFT.protocolId = null; }
   document.getElementById('pacerModal').classList.remove('on');
 }
 
@@ -3793,6 +3857,403 @@ function stopPacer(goToDone){
   PACER.phase = goToDone ? 'done' : 'idle';
   const circle = document.getElementById('pacerCircle');
   if(circle){ circle.classList.remove('inhale','exhale'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// v0.13.0 · EFT Tapping Module
+// Six somatic protocols mapped to specific trading-psychology triggers.
+// Lives inside the Reset modal as the "Tap" tab next to "Breath".
+// State machine: pick → (physical) → sudsBefore → tap → sudsAfter → done
+// Persists each run to Firestore collection `cadence_eft_runs`.
+// ═══════════════════════════════════════════════════════════════════════
+
+const EFT_PROTOCOLS = [
+  {
+    id: 'p0', tag: 'P0', title: 'Pre-Session Activation',
+    sub: 'Patience · edge · discipline · before the bell',
+    suggestedFor: 'gate',
+    rounds: '2–3',
+    setup: "Even though the market is uncertain and I don't know what today will bring, I am a disciplined operator and I deeply accept myself.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow, above nose',          line: "I wait for confirmation. The market comes to me." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye socket, on bone',         line: "I have no need to be right — only a need to follow my edge." },
+      { name: 'Under Eye',   loc: 'Below pupil on cheekbone',                    line: "I respect my stop losses. They are the cost of doing business." },
+      { name: 'Under Nose',  loc: 'Between nose and upper lip',                  line: "I do not chase. I do not force. I do not beg for trades." },
+      { name: 'Chin',        loc: 'Below lower lip, above chin crease',          line: "I am proactive, not reactive." },
+      { name: 'Collarbone',  loc: 'Below the notch where collarbones meet',      line: "I protect my capital before I grow it." },
+      { name: 'Under Arm',   loc: '4 inches below armpit, side of chest',        line: "My worth is not contingent on today's P&L." },
+      { name: 'Top of Head', loc: 'Crown — center, full fingertip contact',      line: "I trade with clarity and surgical precision today." }
+    ]
+  },
+  {
+    id: 'p1', tag: 'P1', title: 'Post-Loss · Aggression Breaker',
+    sub: 'Release the urge · return to plan',
+    suggestedFor: 'cooldown',
+    rounds: '3–5',
+    physical: 'Clench fists and jaw hard for 5 seconds, then throw hands down with a forceful exhale. Repeat 3 times. This tells your nervous system the fight is over.',
+    setup: "Even though I am furious at this stop-out and I want to take it back, I accept this anger and I choose to protect my capital.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow',                       line: "I am pissed off. That trade hurt." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye socket',                  line: "I feel the heat. I want to hit Buy right now." },
+      { name: 'Under Eye',   loc: 'Below pupil on cheekbone',                    line: "It feels like the market took something from me." },
+      { name: 'Under Nose',  loc: 'Between nose and upper lip',                  line: "This anger is trying to protect me, but it will break me." },
+      { name: 'Chin',        loc: 'Below lower lip',                             line: "I release the urge to punish the market." },
+      { name: 'Collarbone',  loc: 'Below collarbone notch',                      line: "I am an executor of a plan — not a fighter chasing a rematch." },
+      { name: 'Under Arm',   loc: '4 inches below armpit',                       line: "Letting go of the must-win grip. It was just one trade." },
+      { name: 'Top of Head', loc: 'Crown',                                       line: "I am back in control. I return to the plan — or I don't trade." }
+    ]
+  },
+  {
+    id: 'p2', tag: 'P2', title: 'Rule Sabotage',
+    sub: 'After breaking a rule · curiosity, not shame',
+    rounds: '2–3',
+    setup: "Even though I just broke my rules and I don't know why, I deeply and completely accept myself.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow',                       line: "I broke the rule." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye',                         line: "I know I should have known better." },
+      { name: 'Under Eye',   loc: 'Below pupil',                                 line: "Part of me knew it in real time." },
+      { name: 'Under Nose',  loc: 'Above upper lip',                             line: "But I overrode it anyway." },
+      { name: 'Chin',        loc: 'Below lower lip',                             line: "What state was I in when that happened?" },
+      { name: 'Collarbone',  loc: 'Below collarbone notch',                      line: "I'm curious about it, not ashamed." },
+      { name: 'Under Arm',   loc: '4 inches below armpit',                       line: "Noticing it now — that's the rep." },
+      { name: 'Top of Head', loc: 'Crown',                                       line: "I return to the rules. The pattern stops here." }
+    ]
+  },
+  {
+    id: 'p3', tag: 'P3', title: 'Worthiness Block',
+    sub: 'Evening · daily · subconscious wins-sabotage',
+    rounds: '3–5',
+    note: 'Best as a daily evening protocol, not just reactive. Reactive use during session is secondary.',
+    setup: "Even though part of me doesn't feel like I deserve this win, I deeply and completely accept myself.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow',                       line: "This feeling that I don't deserve it." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye',                         line: "Waiting for it to be taken away." },
+      { name: 'Under Eye',   loc: 'Below pupil',                                 line: "Cutting the trade early because it can't last." },
+      { name: 'Under Nose',  loc: 'Above upper lip',                             line: "Sizing down because I don't trust myself with more." },
+      { name: 'Chin',        loc: 'Below lower lip',                             line: "Where did I learn that I don't deserve to win?" },
+      { name: 'Collarbone',  loc: 'Below collarbone notch',                      line: "That story is old. It is not me now." },
+      { name: 'Under Arm',   loc: '4 inches below armpit',                       line: "I am allowed to keep what I earn." },
+      { name: 'Top of Head', loc: 'Crown',                                       line: "I deserve the wins my discipline produces." }
+    ]
+  },
+  {
+    id: 'p4', tag: 'P4', title: 'Fear of Success / Loss Cycle',
+    sub: 'Evening · after winning days · anxiety at account highs',
+    rounds: '3–5',
+    note: 'Pair with journaling — surface the earliest "winning then losing" memory.',
+    setup: "Even though I'm afraid that if I win, I'll just lose it back, I deeply and completely accept myself.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow',                       line: "This fear of winning." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye',                         line: "Afraid to actually keep it." },
+      { name: 'Under Eye',   loc: 'Below pupil',                                 line: "Waiting for the crash that always seems to come." },
+      { name: 'Under Nose',  loc: 'Above upper lip',                             line: "I always give it back — that's the old story." },
+      { name: 'Chin',        loc: 'Below lower lip',                             line: "Where did that pattern start?" },
+      { name: 'Collarbone',  loc: 'Below collarbone notch',                      line: "The past does not have to repeat." },
+      { name: 'Under Arm',   loc: '4 inches below armpit',                       line: "I can hold what I build." },
+      { name: 'Top of Head', loc: 'Crown',                                       line: "I am safe to succeed." }
+    ]
+  },
+  {
+    id: 'p5', tag: 'P5', title: 'Post-Session Reset',
+    sub: 'End of day · detach identity from equity curve',
+    rounds: '1–2',
+    setup: "Even though today had its wins and losses, I release them both. I am more than my equity curve.",
+    points: [
+      { name: 'Eyebrow',     loc: 'Inner edge of eyebrow',                       line: "I let go of the rush of any wins." },
+      { name: 'Side of Eye', loc: 'Outer corner of eye',                         line: "I let go of the sting of any losses." },
+      { name: 'Under Eye',   loc: 'Below pupil',                                 line: "These are numbers on a screen. They are not my identity." },
+      { name: 'Under Nose',  loc: 'Above upper lip',                             line: "I close the mental charts." },
+      { name: 'Chin',        loc: 'Below lower lip',                             line: "I return to the present moment." },
+      { name: 'Collarbone',  loc: 'Below collarbone notch',                      line: "I review today honestly, with no judgment of myself." },
+      { name: 'Under Arm',   loc: '4 inches below armpit',                       line: "Tomorrow is a fresh canvas." },
+      { name: 'Top of Head', loc: 'Crown',                                       line: "The session is closed. I am free to be me now." }
+    ]
+  }
+];
+
+const EFT = {
+  protocolId: null,
+  proto: null,
+  stage: 'pick',
+  pointIdx: 0,
+  round: 1,
+  sudsBefore: null,
+  sudsAfter: null,
+  startMs: null,
+  triggeredBy: 'manual'
+};
+
+function switchResetTab(which){
+  document.querySelectorAll('.reset-hub-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === which));
+  const setup = document.getElementById('pacerSetup');
+  const picker = document.getElementById('eftPicker');
+  const runner = document.getElementById('eftRunner');
+  const tabs = document.getElementById('resetHubTabs');
+  if(which === 'breath'){
+    setup.style.display = '';
+    picker.style.display = 'none';
+    runner.style.display = 'none';
+    tabs.style.display = '';
+  } else if(which === 'tap'){
+    setup.style.display = 'none';
+    if(EFT.stage === 'pick' || !EFT.proto){
+      renderEftPicker();
+      picker.style.display = '';
+      runner.style.display = 'none';
+    } else {
+      picker.style.display = 'none';
+      runner.style.display = '';
+    }
+    tabs.style.display = '';
+  }
+  // Hide pacer-running and pacer-done if switching tabs mid-flight
+  document.getElementById('pacerRunning').style.display = 'none';
+  document.getElementById('pacerDone').style.display = 'none';
+}
+
+function renderEftPicker(){
+  const grid = document.getElementById('eftProtoGrid');
+  if(!grid) return;
+  // Find suggested protocol from URL or default none
+  const params = new URLSearchParams(window.location.search);
+  const suggest = params.get('reset');
+  const suggestMap = { 'p0':'p0','p1':'p1','p2':'p2','p3':'p3','p4':'p4','p5':'p5','gate':'p0','cooldown':'p1' };
+  const sId = suggestMap[suggest] || null;
+  let html = '';
+  EFT_PROTOCOLS.forEach(p => {
+    const isSug = (p.id === sId);
+    const sugBadge = isSug ? '<div class="eft-pcard-suggest">Suggested</div>' : '';
+    html += `<div class="eft-protocol-card ${isSug?'suggested':''}" data-pid="${p.id}" onclick="startEftProtocol('${p.id}')">
+      <div class="eft-pcard-tag">${p.tag}</div>
+      <div class="eft-pcard-body">
+        <div class="eft-pcard-title">${p.title}</div>
+        <div class="eft-pcard-sub">${p.sub}</div>
+      </div>
+      ${sugBadge}
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function startEftProtocol(protocolId){
+  const proto = EFT_PROTOCOLS.find(p => p.id === protocolId);
+  if(!proto){ console.warn('[eft] unknown protocol:', protocolId); return; }
+  EFT.protocolId = protocolId;
+  EFT.proto = proto;
+  EFT.startMs = Date.now();
+  EFT.round = 1;
+  EFT.sudsBefore = null; EFT.sudsAfter = null;
+  EFT.pointIdx = 0;
+  EFT.stage = proto.physical ? 'physical' : 'sudsBefore';
+  // Capture trigger context from URL once at start
+  const p = new URLSearchParams(window.location.search);
+  EFT.triggeredBy = p.get('reset') || 'manual';
+  document.getElementById('eftPicker').style.display = 'none';
+  document.getElementById('eftRunner').style.display = '';
+  renderEftRunner();
+}
+
+function renderEftRunner(){
+  const r = document.getElementById('eftRunner');
+  const p = EFT.proto;
+  if(!r || !p) return;
+  let html = '';
+  const ctxPill = (EFT.triggeredBy && EFT.triggeredBy !== 'manual')
+    ? `<div style="text-align:center"><span class="eft-context-pill">Triggered: ${EFT.triggeredBy === 'gate' ? '15-min gate' : EFT.triggeredBy === 'cooldown' ? 'Post-loss cooldown' : EFT.triggeredBy}</span></div>` : '';
+
+  if(EFT.stage === 'physical'){
+    html = ctxPill + `
+      <div class="eft-stage-label">${p.tag} · Phase 1</div>
+      <div class="eft-stage-title">${p.title}</div>
+      <div class="eft-aggression-pre"><strong>Physical release first</strong>${escapeEftHtml(p.physical)}</div>
+      <p style="font-size:11.5px;color:var(--tx3);text-align:center;line-height:1.5;margin-bottom:18px;font-style:italic">When done, continue to tapping.</p>
+      <div class="pacer-actions" style="justify-content:center">
+        <button class="pacer-btn ghost" onclick="exitEft()">Cancel</button>
+        <button class="pacer-btn primary" onclick="EFT.stage='sudsBefore';renderEftRunner()">Done — continue</button>
+      </div>`;
+  } else if(EFT.stage === 'sudsBefore' || EFT.stage === 'sudsAfter'){
+    const isBefore = EFT.stage === 'sudsBefore';
+    const subLabel = isBefore ? 'Rate intensity NOW (before tapping)' : 'Rate intensity NOW (after tapping)';
+    const cur = isBefore ? EFT.sudsBefore : EFT.sudsAfter;
+    let btns = '';
+    for(let i=0; i<=10; i++){
+      btns += `<button class="eft-suds-btn ${cur===i?'on':''}" onclick="setSuds(${i})">${i}</button>`;
+    }
+    let msg = '&nbsp;';
+    if(cur !== null){
+      msg = cur <= 2 ? '✓ Low — clear' : cur <= 5 ? '⚠ Moderate — more rounds recommended' : '⛔ High — tap until it drops';
+    }
+    const nextLabel = isBefore ? 'Begin tapping →' : 'Finish';
+    const nextFn = isBefore ? 'beginTapping()' : 'finishEft()';
+    html = ctxPill + `
+      <div class="eft-stage-label">${p.tag} · ${isBefore?'Before':'After'}</div>
+      <div class="eft-stage-title">${p.title}</div>
+      <p style="text-align:center;font-size:11.5px;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase;font-weight:600;margin-bottom:14px">${subLabel}</p>
+      <div class="eft-suds-row">${btns}</div>
+      <div class="eft-suds-msg">${msg}</div>
+      ${isBefore && p.setup ? `<div class="eft-setup-card"><div class="eft-setup-tag" style="font-style:normal">Setup statement (you'll say 3× at the karate-chop point)</div>"${p.setup}"</div>` : ''}
+      <div class="pacer-actions" style="justify-content:center">
+        <button class="pacer-btn ghost" onclick="exitEft()">Cancel</button>
+        ${cur !== null ? `<button class="pacer-btn primary" onclick="${nextFn}">${nextLabel}</button>` : ''}
+      </div>`;
+  } else if(EFT.stage === 'tap'){
+    const points = p.points;
+    const total = points.length + 1;
+    const idx = EFT.pointIdx;
+    let pointHtml = '';
+    if(idx === 0){
+      pointHtml = `
+        <div class="eft-point-card">
+          <div class="eft-point-pos">Karate Chop · Setup · say 3 times</div>
+          <div class="eft-point-name">KC</div>
+          <div class="eft-point-loc">Side of hand, below pinky · tap continuously</div>
+          <div class="eft-point-line">"${p.setup}"</div>
+        </div>`;
+    } else {
+      const pt = points[idx-1];
+      pointHtml = `
+        <div class="eft-point-card">
+          <div class="eft-point-pos">Point ${idx} of ${points.length} · tap 5–7 times</div>
+          <div class="eft-point-name">${pt.name}</div>
+          <div class="eft-point-loc">${pt.loc}</div>
+          <div class="eft-point-line">"${pt.line}"</div>
+        </div>`;
+    }
+    let dots = '';
+    for(let i=0; i<total; i++){
+      const cls = i < idx ? 'done' : i === idx ? 'now' : '';
+      dots += `<div class="eft-progress-dot ${cls}"></div>`;
+    }
+    const isLast = idx === total - 1;
+    html = ctxPill + `
+      <div class="eft-stage-label">${p.tag} · Tapping</div>
+      <div class="eft-stage-title">${p.title}</div>
+      <div class="eft-round-row"><span class="eft-round-pill">Round ${EFT.round}</span><span>Recommended ${p.rounds} · target SUDS ≤ 2</span></div>
+      <div class="eft-progress">${dots}</div>
+      ${pointHtml}
+      <div class="pacer-actions" style="justify-content:center;flex-wrap:wrap">
+        <button class="pacer-btn ghost" onclick="exitEft()">End early</button>
+        ${idx > 0 ? '<button class="pacer-btn ghost" onclick="advancePoint(-1)">← Back</button>' : ''}
+        <button class="pacer-btn primary" onclick="advancePoint(1)">${isLast ? 'Round complete →' : 'Next point →'}</button>
+      </div>`;
+  } else if(EFT.stage === 'roundDecision'){
+    html = ctxPill + `
+      <div class="eft-stage-label">${p.tag} · Round ${EFT.round-1} done</div>
+      <div class="eft-stage-title">Continue or finish?</div>
+      <p style="text-align:center;font-size:13px;color:var(--tx2);line-height:1.5;max-width:420px;margin:0 auto 22px">Recommended ${p.rounds} rounds. You've completed ${EFT.round-1}.</p>
+      <div class="pacer-actions" style="justify-content:center;flex-wrap:wrap">
+        <button class="pacer-btn ghost" onclick="EFT.stage='sudsAfter';renderEftRunner()">Rate &amp; finish</button>
+        <button class="pacer-btn primary" onclick="EFT.stage='tap';EFT.pointIdx=0;renderEftRunner()">Another round →</button>
+      </div>`;
+  } else if(EFT.stage === 'done'){
+    const dropped = (EFT.sudsBefore !== null && EFT.sudsAfter !== null) ? EFT.sudsBefore - EFT.sudsAfter : null;
+    let dropTxt = '';
+    if(dropped !== null){
+      const sign = dropped > 0 ? 'down' : (dropped < 0 ? 'up' : 'flat');
+      dropTxt = `<div style="font-size:13px;color:var(--tx2);margin-top:4px">${EFT.sudsBefore} → ${EFT.sudsAfter} (${sign} ${Math.abs(dropped)})</div>`;
+    }
+    html = `
+      <div class="eft-stage-label">${p.tag} · Complete</div>
+      <div class="eft-stage-title">Good. That's the rep.</div>
+      <p style="text-align:center;font-size:13px;color:var(--tx2);line-height:1.5;max-width:420px;margin:0 auto 8px">${EFT.round} round${EFT.round>1?'s':''} of ${p.title}.</p>
+      <div style="text-align:center;margin-bottom:22px">${dropTxt}</div>
+      ${p.note ? `<p class="eft-note">${escapeEftHtml(p.note)}</p>` : ''}
+      <div class="pacer-actions" style="justify-content:center">
+        <button class="pacer-btn primary" onclick="closePacer()">Done</button>
+      </div>`;
+  }
+  r.innerHTML = html;
+}
+
+function setSuds(v){
+  if(EFT.stage === 'sudsBefore') EFT.sudsBefore = v;
+  else if(EFT.stage === 'sudsAfter') EFT.sudsAfter = v;
+  renderEftRunner();
+}
+
+function beginTapping(){
+  EFT.stage = 'tap';
+  EFT.pointIdx = 0;
+  renderEftRunner();
+}
+
+function advancePoint(dir){
+  const total = EFT.proto.points.length + 1; // KC + 8
+  const next = EFT.pointIdx + dir;
+  if(next < 0) return;
+  if(next >= total){
+    EFT.round += 1;
+    EFT.pointIdx = 0;
+    EFT.stage = 'roundDecision';
+    renderEftRunner();
+    return;
+  }
+  EFT.pointIdx = next;
+  renderEftRunner();
+}
+
+function finishEft(){
+  EFT.stage = 'done';
+  renderEftRunner();
+  saveEftRun({completed:true}).catch(e => console.warn('[eft] save failed:', e));
+}
+
+function exitEft(){
+  if(EFT.proto && (EFT.stage === 'tap' || EFT.stage === 'sudsAfter' || EFT.stage === 'roundDecision' || EFT.stage === 'done')){
+    saveEftRun({completed:(EFT.stage === 'done')}).catch(e => console.warn('[eft] save failed:', e));
+  }
+  closePacer();
+}
+
+async function saveEftRun(opts){
+  if(!EFT.proto || !window.firebase || !firebase.firestore) return;
+  const completed = opts ? !!opts.completed : true;
+  try {
+    const db = firebase.firestore();
+    const runId = 'eft_' + EFT.startMs;
+    await db.collection('cadence_eft_runs').doc(runId).set({
+      runId,
+      protocolId: EFT.protocolId,
+      protocolTitle: EFT.proto.title,
+      startMs: EFT.startMs,
+      endMs: Date.now(),
+      durMs: Date.now() - EFT.startMs,
+      rounds: Math.max(1, EFT.round - (EFT.stage === 'tap' ? 0 : 1)),
+      sudsBefore: EFT.sudsBefore,
+      sudsAfter: EFT.sudsAfter,
+      sudsDelta: (EFT.sudsBefore !== null && EFT.sudsAfter !== null) ? (EFT.sudsBefore - EFT.sudsAfter) : null,
+      completed,
+      triggeredBy: EFT.triggeredBy || 'manual',
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e){
+    console.warn('[eft] firestore save failed:', e);
+  }
+}
+
+function escapeEftHtml(s){
+  if(!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// v0.13.0 · Auto-open Reset modal from ?reset=pN URL parameter
+function checkResetUrlParam(){
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('reset');
+    if(!r) return;
+    const valid = ['p0','p1','p2','p3','p4','p5','gate','cooldown'].includes(r);
+    if(!valid) return;
+    const map = { 'gate':'p0','cooldown':'p1','p0':'p0','p1':'p1','p2':'p2','p3':'p3','p4':'p4','p5':'p5' };
+    const protoId = map[r];
+    setTimeout(() => { try { openReset(protoId); } catch(e){ console.warn('[eft] auto-open failed:', e); } }, 700);
+  } catch(e){ console.warn('[eft] url param parse failed:', e); }
+}
+
+function wireResetHubTabs(){
+  document.querySelectorAll('.reset-hub-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchResetTab(tab.dataset.tab));
+  });
 }
 
 function wirePacer(){
@@ -3869,9 +4330,13 @@ function init(){
   wire();
   wireMorningCard();
   wirePacer();
+  wireResetHubTabs();
   wireHistoryModal();
   renderMorningCard();
   preflightBanner();
+
+  // v0.13.0 · Auto-open Reset modal if ?reset=pN URL param present
+  checkResetUrlParam();
 
   // v0.11.8 · Phase 1c: re-prompt / retry any session that wasn't saved before tab closed
   recoverPendingSession();
@@ -4009,10 +4474,17 @@ else init();
 
 <!-- v0.11.1 · Reset button moved to top bar (see .reset-tb-btn) -->
 
-<!-- ═══════════════ v0.11 BREATH PACER MODAL ═══════════════ -->
+<!-- ═══════════════ v0.11 BREATH PACER MODAL · v0.13.0 augmented with EFT tap module ═══════════════ -->
 <div class="pacer-bg" id="pacerModal">
   <button class="pacer-close-x" id="pacerClose">✕</button>
-  <!-- Setup phase -->
+
+  <!-- v0.13.0 · Reset hub tabs (Breath / Tap) — visible on setup/pick stages, hidden during run -->
+  <div class="reset-hub-tabs" id="resetHubTabs">
+    <button class="reset-hub-tab on" data-tab="breath">Breath</button>
+    <button class="reset-hub-tab" data-tab="tap">Tap</button>
+  </div>
+
+  <!-- Setup phase (Breath) -->
   <div id="pacerSetup" class="pacer-setup">
     <h2>Reset</h2>
     <p>Paced breathing. Four seconds in, six seconds out — the long exhale loads parasympathetic tone. Follow the circle. Do not force it.</p>
@@ -4026,7 +4498,22 @@ else init();
       <button class="pacer-btn primary" id="pacerBegin">Begin</button>
     </div>
   </div>
-  <!-- Running phase -->
+
+  <!-- v0.13.0 · EFT Tapping picker -->
+  <div id="eftPicker" class="eft-pick-wrap" style="display:none">
+    <h2>Tapping protocols</h2>
+    <p class="lead">Six EFT protocols. Each is a setup statement plus an 8-point sequence. Read the line, tap the point, advance.</p>
+    <div class="eft-protocol-grid" id="eftProtoGrid">
+      <!-- Cards rendered by JS -->
+    </div>
+  </div>
+
+  <!-- v0.13.0 · EFT Tapping runner (multi-stage: physical → SUDS-before → tap → SUDS-after → done) -->
+  <div id="eftRunner" class="eft-runner" style="display:none">
+    <!-- Rendered by renderEftRunner() -->
+  </div>
+
+  <!-- Running phase (Breath) -->
   <div id="pacerRunning" style="display:none;text-align:center">
     <div class="pacer-circle-wrap">
       <div class="pacer-circle" id="pacerCircle"></div>
@@ -4038,7 +4525,7 @@ else init();
       <button class="pacer-btn ghost" id="pacerStop">End session</button>
     </div>
   </div>
-  <!-- Done phase -->
+  <!-- Done phase (Breath) -->
   <div id="pacerDone" style="display:none;text-align:center;padding:20px">
     <h2 style="font-family:var(--f-head);font-size:30px;font-style:italic;font-weight:600;color:var(--tx);margin-bottom:10px">Good.</h2>
     <p style="font-size:13px;color:var(--tx2);line-height:1.5;max-width:420px;margin:0 auto 22px">That is a rep. The neural pattern of down-regulation gets stronger every time you do this.</p>
